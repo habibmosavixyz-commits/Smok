@@ -1,0 +1,9 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "io.github.habibmosavixyz_commits.twa",
+        "sha256_cert_fingerprints": ["B9:76:A0:76:8A:A8:6D:1A:46:8B:2B:D7:CD:2F:F9:16:63:48:C6:EE:76:D2:A8:B3:69:D2:B4:BD:5F:DD:BB:A7"]
+      }
+    }]
+
