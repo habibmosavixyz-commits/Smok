@@ -79,64 +79,51 @@
   }
   .count-number.pulse { transform: scale(1.08); }
 
-  /* ---- cigarette button ---- */
-  .cig-wrap {
+  /* ---- tap button (simple glowing button) ---- */
+  .tap-wrap {
     position: relative;
-    width: 220px;
-    height: 100px;
+    width: 190px;
+    height: 190px;
     display: flex;
     align-items: center;
     justify-content: center;
   }
-  .cig-btn { background: none; border: none; cursor: pointer; padding: 0; width: 100%; height: 100%; position: relative; }
-  .cig-rotate {
-    position: absolute;
-    top: 50%; left: 50%;
-    width: 176px; height: 34px;
-    transform: translate(-50%, -50%) rotate(-7deg);
-  }
-  .cig-body {
-    position: absolute; inset: 0;
-    background: linear-gradient(180deg, #F6F2E9 0%, #E2DCCC 100%);
-    border-radius: 17px;
-    box-shadow: 0 5px 12px rgba(0,0,0,0.4);
-  }
-  .cig-body::after{
-    content:'';
-    position:absolute; left:26px; top:0; bottom:0; width:2px;
-    background: rgba(0,0,0,0.06);
-  }
-  .cig-filter {
-    position: absolute; right: 0; top: 0; bottom: 0; width: 42px;
-    background: linear-gradient(180deg, #CB8E60, #A76B3E);
-    border-radius: 0 17px 17px 0;
-  }
-  .cig-tip {
-    position: absolute; left: -15px; top: 50%;
-    width: 38px; height: 38px;
+  .tap-btn {
+    width: 168px;
+    height: 168px;
     border-radius: 50%;
-    transform: translateY(-50%);
-    transition: background 0.4s ease, box-shadow 0.4s ease;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.4s ease, box-shadow 0.4s ease, transform 0.08s ease;
   }
-  .smoke-wisp {
+  .tap-btn:active { transform: scale(0.94); }
+  .tap-plus {
+    font-size: 56px;
+    font-weight: 300;
+    color: rgba(255,255,255,0.92);
+    line-height: 1;
+    margin-top: -4px;
+    user-select: none;
+  }
+  .tap-halo {
     position: absolute;
-    width: 13px; height: 13px;
+    inset: 0;
     border-radius: 50%;
-    background: rgba(220,218,212,0.5);
-    filter: blur(3px);
-    left: -20px; top: -8px;
-    animation: smokeRise 4.2s ease-in infinite;
-    opacity: 0;
+    z-index: 1;
+    opacity: 0.35;
+    animation: haloBreathe 2.6s ease-in-out infinite;
   }
-  .smoke-wisp:nth-child(2){ left: -14px; top: -4px; animation-delay: 1.4s; }
-  .smoke-wisp:nth-child(3){ left: -24px; top: -2px; animation-delay: 2.8s; }
-  @keyframes smokeRise {
-    0% { transform: translate(0,0) scale(0.6); opacity: 0; }
-    18% { opacity: 0.55; }
-    100% { transform: translate(-14px,-58px) scale(1.5); opacity: 0; }
+  @keyframes haloBreathe {
+    0%, 100% { transform: scale(1); opacity: 0.3; }
+    50% { transform: scale(1.14); opacity: 0.08; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .smoke-wisp { animation: none; opacity: 0; }
+    .tap-halo { animation: none; }
   }
 
   .tap-caption { margin-top: 18px; font-size: 12.5px; color: var(--ash); }
@@ -153,8 +140,47 @@
     cursor: pointer;
   }
 
+  .forgot-btn {
+    margin-top: 10px;
+    background: none;
+    border: none;
+    color: var(--ash);
+    font-family: inherit;
+    font-size: 12.5px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+    padding: 4px;
+  }
+
   .cost-today { margin-top: 16px; font-size: 13px; color: var(--ash); }
   .cost-today b { color: var(--paper); font-weight: 700; }
+
+  .friend-card {
+    width: 100%;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin-top: 24px;
+    text-align: center;
+  }
+  .friend-text { font-size: 13.5px; margin-bottom: 10px; }
+  .friend-row { display: flex; align-items: center; justify-content: center; gap: 18px; }
+  .friend-btn {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--paper);
+    font-size: 20px;
+    font-family: inherit;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .friend-btn:active { opacity: 0.75; }
+  .friend-count { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; min-width: 30px; }
+  .friend-note { margin-top: 8px; font-size: 11.5px; color: var(--ash); }
 
   /* ---------- STATS ---------- */
   #view-stats { padding: 10px 24px 30px; overflow-y: auto; }
@@ -240,22 +266,27 @@
     <div class="count-label">امروز</div>
     <div class="count-number" id="count-number">۰</div>
 
-    <div class="cig-wrap">
-      <button class="cig-btn" id="tap-btn" aria-label="یک نخ ثبت شد">
-        <div class="cig-rotate">
-          <div class="cig-body"></div>
-          <div class="cig-filter"></div>
-          <div class="cig-tip" id="cig-tip"></div>
-          <div class="smoke-wisp"></div>
-          <div class="smoke-wisp"></div>
-          <div class="smoke-wisp"></div>
-        </div>
+    <div class="tap-wrap">
+      <div class="tap-halo" id="tap-halo"></div>
+      <button class="tap-btn" id="tap-btn" aria-label="ثبت یک نخ">
+        <span class="tap-plus">+</span>
       </button>
     </div>
-    <div class="tap-caption">بزن رو نخ سیگار برای ثبت</div>
+    <div class="tap-caption">بزن برای ثبت</div>
 
     <button class="undo-btn" id="undo-btn">اصلاح آخرین ثبت</button>
+    <button class="forgot-btn" id="forgot-btn">یه نخی که مطمئن نبودم رو هم ثبت کن</button>
     <div class="cost-today" id="cost-today"></div>
+
+    <div class="friend-card">
+      <div class="friend-text">رفیقت از پاکتت برداشت؟</div>
+      <div class="friend-row">
+        <button class="friend-btn" id="friend-minus">−</button>
+        <div class="friend-count" id="friend-count">۰</div>
+        <button class="friend-btn" id="friend-plus">+</button>
+      </div>
+      <div class="friend-note">فقط تو هزینه‌ها حساب میشه، تو شمارش امروزت نه</div>
+    </div>
   </main>
 </div>
 
@@ -306,6 +337,7 @@
 
 <script>
 const LOG_KEY = 'smoke-log';
+const FRIEND_KEY = 'friend-log';
 const SETTINGS_KEY = 'smoke-settings';
 const faDigits = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
 function toFa(n){ return String(n).split('').map(d => faDigits[d] ?? d).join(''); }
@@ -345,6 +377,7 @@ function daysAgoKey(n){
 }
 
 let log = {};
+let friendLog = {};
 let settings = { packPrice: 0, cigsPerPack: 20, packPromptCount: 0 };
 
 /* ذخیره‌سازی محلی روی خود گوشی (بدون نیاز به اینترنت) */
@@ -354,6 +387,10 @@ async function loadAll(){
     log = raw ? JSON.parse(raw) : {};
   } catch(e) { log = {}; }
   try {
+    const raw = localStorage.getItem(FRIEND_KEY);
+    friendLog = raw ? JSON.parse(raw) : {};
+  } catch(e) { friendLog = {}; }
+  try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (raw) settings = Object.assign({ packPrice:0, cigsPerPack:20, packPromptCount:0 }, JSON.parse(raw));
   } catch(e) { /* keep defaults */ }
@@ -362,28 +399,43 @@ async function saveLog(){
   try { localStorage.setItem(LOG_KEY, JSON.stringify(log)); }
   catch(e) { console.error('ذخیره‌سازی ناموفق بود', e); }
 }
+async function saveFriendLog(){
+  try { localStorage.setItem(FRIEND_KEY, JSON.stringify(friendLog)); }
+  catch(e) { console.error('ذخیره‌سازی ناموفق بود', e); }
+}
 async function saveSettings(){
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
   catch(e) { console.error('ذخیره‌سازی تنظیمات ناموفق بود', e); }
 }
 
-/* ---- color interpolation for the cigarette tip ---- */
+/* هزینه بر اساس نخ‌های خودت + نخ‌هایی که رفیقت برداشته حساب میشه */
+function dayTotal(key){ return (log[key]||0) + (friendLog[key]||0); }
+function grandTotal(){
+  const keys = new Set([...Object.keys(log), ...Object.keys(friendLog)]);
+  let sum = 0;
+  keys.forEach(k => sum += dayTotal(k));
+  return sum;
+}
+
+/* ---- color interpolation for the tap button ---- */
 const BLUE = [42, 99, 150];
 const RED  = [193, 80, 46];
 const BLACK = [18, 17, 16];
 function lerp(a,b,t){ return Math.round(a + (b-a)*t); }
-function tipColor(count){
+function btnColor(count){
   if (count >= 20) return BLACK;
   const t = Math.min(count, 19) / 19;
   return [ lerp(BLUE[0],RED[0],t), lerp(BLUE[1],RED[1],t), lerp(BLUE[2],RED[2],t) ];
 }
 function rgbStr(c){ return `rgb(${c[0]},${c[1]},${c[2]})`; }
-function applyTipColor(count){
-  const c = tipColor(count);
-  const tip = document.getElementById('cig-tip');
+function applyButtonColor(count){
+  const c = btnColor(count);
+  const btn = document.getElementById('tap-btn');
+  const halo = document.getElementById('tap-halo');
   const light = c.map(v => Math.min(255, v+45));
-  tip.style.background = `radial-gradient(circle at 35% 30%, ${rgbStr(light)} 0%, ${rgbStr(c)} 75%)`;
-  tip.style.boxShadow = `0 0 0 1px rgba(${c[0]},${c[1]},${c[2]},0.35), 0 0 16px 3px rgba(${c[0]},${c[1]},${c[2]},0.6)`;
+  btn.style.background = `radial-gradient(circle at 35% 30%, ${rgbStr(light)} 0%, ${rgbStr(c)} 75%)`;
+  btn.style.boxShadow = `0 0 0 1px rgba(${c[0]},${c[1]},${c[2]},0.35), 0 10px 26px -6px rgba(${c[0]},${c[1]},${c[2]},0.55)`;
+  halo.style.background = `radial-gradient(circle, ${rgbStr(c)} 0%, transparent 70%)`;
 }
 
 /* ---- rendering: home ---- */
@@ -399,13 +451,15 @@ function renderHome(){
   const key = todayKey();
   const count = log[key] || 0;
   document.getElementById('count-number').textContent = toFa(count);
-  applyTipColor(count);
+  applyButtonColor(count);
   const { weekday, day } = formatDateLabel(key);
   document.getElementById('today-date').textContent = weekday + '، ' + day;
 
+  document.getElementById('friend-count').textContent = toFa(friendLog[key] || 0);
+
   const ppc = pricePerCig();
   const costEl = document.getElementById('cost-today');
-  costEl.innerHTML = ppc > 0 ? `هزینه امروز: <b>${faNum(count*ppc)} تومان</b>` : '';
+  costEl.innerHTML = ppc > 0 ? `هزینه امروز: <b>${faNum(dayTotal(key)*ppc)} تومان</b>` : '';
 }
 
 /* ---- rendering: stats ---- */
@@ -414,15 +468,22 @@ function renderStats(){
   const totalAll = keys.reduce((s,k) => s + log[k], 0);
   const daysTracked = keys.length;
   const avg = daysTracked > 0 ? totalAll / daysTracked : 0;
-  let weekTotal = 0, monthTotal = 0;
+  let weekTotal = 0, monthTotal = 0, costMonth = 0;
   for (let i=0; i<7; i++) weekTotal += log[daysAgoKey(i)] || 0;
-  for (let i=0; i<30; i++) monthTotal += log[daysAgoKey(i)] || 0;
+  for (let i=0; i<30; i++){
+    const k = daysAgoKey(i);
+    monthTotal += log[k] || 0;
+    costMonth += dayTotal(k);
+  }
+  const ppc = pricePerCig();
 
   document.getElementById('stat-grid').innerHTML = `
     <div class="stat-box"><div class="label">جمع کل</div><div class="value">${toFa(totalAll)}</div></div>
     <div class="stat-box"><div class="label">میانگین روزانه</div><div class="value">${toFa(Math.round(avg*10)/10)}</div></div>
     <div class="stat-box"><div class="label">این هفته</div><div class="value">${toFa(weekTotal)}</div></div>
     <div class="stat-box"><div class="label">این ماه</div><div class="value">${toFa(monthTotal)}</div></div>
+    <div class="stat-box"><div class="label">هزینه این ماه</div><div class="value" style="font-size:16px">${ppc>0 ? faNum(costMonth*ppc)+' ت' : '—'}</div></div>
+    <div class="stat-box"><div class="label">هزینه کل</div><div class="value" style="font-size:16px">${ppc>0 ? faNum(grandTotal()*ppc)+' ت' : '—'}</div></div>
   `;
 
   const last14 = [];
@@ -459,13 +520,11 @@ function renderCost(){
   const ppc = pricePerCig();
   document.getElementById('price-per-cig').textContent = ppc > 0 ? faNum(ppc) + ' تومان' : '—';
   const key = todayKey();
-  const todayCount = log[key] || 0;
-  document.getElementById('cost-summary-today').textContent = ppc > 0 ? faNum(todayCount*ppc) + ' تومان' : '—';
+  document.getElementById('cost-summary-today').textContent = ppc > 0 ? faNum(dayTotal(key)*ppc) + ' تومان' : '—';
   let monthTotal = 0;
-  for (let i=0; i<30; i++) monthTotal += log[daysAgoKey(i)] || 0;
+  for (let i=0; i<30; i++) monthTotal += dayTotal(daysAgoKey(i));
   document.getElementById('cost-summary-month').textContent = ppc > 0 ? faNum(monthTotal*ppc) + ' تومان' : '—';
-  const allTotal = Object.values(log).reduce((s,v) => s+v, 0);
-  document.getElementById('cost-summary-total').textContent = ppc > 0 ? faNum(allTotal*ppc) + ' تومان' : '—';
+  document.getElementById('cost-summary-total').textContent = ppc > 0 ? faNum(grandTotal()*ppc) + ' تومان' : '—';
 }
 
 function renderAll(){ renderHome(); renderStats(); renderCost(); }
@@ -531,6 +590,16 @@ function spawnParticles(anchorEl, color){
   }
 }
 
+async function checkPackCompletion(){
+  const cpp = settings.cigsPerPack || 20;
+  const packsCompleted = Math.floor(grandTotal() / cpp);
+  if (packsCompleted > (settings.packPromptCount || 0)){
+    settings.packPromptCount = packsCompleted;
+    await saveSettings();
+    openPackModal();
+  }
+}
+
 async function addOne(){
   const key = todayKey();
   log[key] = (log[key] || 0) + 1;
@@ -538,17 +607,9 @@ async function addOne(){
   const numEl = document.getElementById('count-number');
   numEl.classList.add('pulse');
   setTimeout(() => numEl.classList.remove('pulse'), 150);
-  spawnParticles(document.getElementById('cig-tip'), tipColor(log[key]));
+  spawnParticles(document.getElementById('tap-btn'), btnColor(log[key]));
   await saveLog();
-
-  const total = Object.values(log).reduce((s,v) => s+v, 0);
-  const cpp = settings.cigsPerPack || 20;
-  const packsCompleted = Math.floor(total / cpp);
-  if (packsCompleted > (settings.packPromptCount || 0)){
-    settings.packPromptCount = packsCompleted;
-    await saveSettings();
-    openPackModal();
-  }
+  await checkPackCompletion();
 }
 async function undoOne(){
   const key = todayKey();
@@ -557,6 +618,22 @@ async function undoOne(){
     if (log[key] === 0) delete log[key];
     renderAll();
     await saveLog();
+  }
+}
+async function friendPlus(){
+  const key = todayKey();
+  friendLog[key] = (friendLog[key] || 0) + 1;
+  renderAll();
+  await saveFriendLog();
+  await checkPackCompletion();
+}
+async function friendMinus(){
+  const key = todayKey();
+  if ((friendLog[key] || 0) > 0){
+    friendLog[key] -= 1;
+    if (friendLog[key] === 0) delete friendLog[key];
+    renderAll();
+    await saveFriendLog();
   }
 }
 async function savePrice(){
@@ -579,6 +656,9 @@ function switchView(view){
 
 document.getElementById('tap-btn').addEventListener('click', addOne);
 document.getElementById('undo-btn').addEventListener('click', undoOne);
+document.getElementById('forgot-btn').addEventListener('click', addOne);
+document.getElementById('friend-plus').addEventListener('click', friendPlus);
+document.getElementById('friend-minus').addEventListener('click', friendMinus);
 document.getElementById('save-price-btn').addEventListener('click', savePrice);
 document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => switchView(b.dataset.view)));
 
