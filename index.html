@@ -182,6 +182,47 @@
   .friend-count { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; min-width: 30px; }
   .friend-note { margin-top: 8px; font-size: 11.5px; color: var(--ash); }
 
+  .loose-card {
+    width: 100%;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin-top: 14px;
+    text-align: center;
+  }
+  .loose-btn {
+    margin-top: 8px;
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--paper);
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    padding: 11px;
+    border-radius: 12px;
+    cursor: pointer;
+  }
+  .loose-btn:active { opacity: 0.8; }
+
+  .support-link {
+    display: block;
+    width: 100%;
+    margin-top: 22px;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    color: var(--paper);
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    padding: 13px;
+    border-radius: 14px;
+  }
+  .support-link:active { opacity: 0.8; }
+
   /* ---------- STATS ---------- */
   #view-stats { padding: 10px 24px 30px; overflow-y: auto; }
   #view-stats h1 { font-size: 18px; font-weight: 700; margin-bottom: 18px; }
@@ -287,6 +328,13 @@
       </div>
       <div class="friend-note">فقط تو هزینه‌ها حساب میشه، تو شمارش امروزت نه</div>
     </div>
+
+    <div class="loose-card">
+      <div class="friend-text">یه نخ جدا (نخی) با قیمت دیگه خریدی؟</div>
+      <button class="loose-btn" id="loose-btn">ثبت با قیمت دیگه</button>
+    </div>
+
+    <a class="support-link" href="https://reymit.ir/networkgame" target="_blank" rel="noopener">🧡 حمایت از توسعه‌دهنده</a>
   </main>
 </div>
 
@@ -338,6 +386,8 @@
 <script>
 const LOG_KEY = 'smoke-log';
 const FRIEND_KEY = 'friend-log';
+const LOOSE_KEY = 'loose-log';
+const LOOSE_COST_KEY = 'loose-cost-log';
 const SETTINGS_KEY = 'smoke-settings';
 const faDigits = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
 function toFa(n){ return String(n).split('').map(d => faDigits[d] ?? d).join(''); }
@@ -378,6 +428,8 @@ function daysAgoKey(n){
 
 let log = {};
 let friendLog = {};
+let looseLog = {};
+let looseCostLog = {};
 let settings = { packPrice: 0, cigsPerPack: 20, packPromptCount: 0 };
 
 /* ذخیره‌سازی محلی روی خود گوشی (بدون نیاز به اینترنت) */
@@ -391,6 +443,14 @@ async function loadAll(){
     friendLog = raw ? JSON.parse(raw) : {};
   } catch(e) { friendLog = {}; }
   try {
+    const raw = localStorage.getItem(LOOSE_KEY);
+    looseLog = raw ? JSON.parse(raw) : {};
+  } catch(e) { looseLog = {}; }
+  try {
+    const raw = localStorage.getItem(LOOSE_COST_KEY);
+    looseCostLog = raw ? JSON.parse(raw) : {};
+  } catch(e) { looseCostLog = {}; }
+  try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (raw) settings = Object.assign({ packPrice:0, cigsPerPack:20, packPromptCount:0 }, JSON.parse(raw));
   } catch(e) { /* keep defaults */ }
@@ -403,17 +463,38 @@ async function saveFriendLog(){
   try { localStorage.setItem(FRIEND_KEY, JSON.stringify(friendLog)); }
   catch(e) { console.error('ذخیره‌سازی ناموفق بود', e); }
 }
+async function saveLooseLog(){
+  try { localStorage.setItem(LOOSE_KEY, JSON.stringify(looseLog)); }
+  catch(e) { console.error('ذخیره‌سازی ناموفق بود', e); }
+}
+async function saveLooseCostLog(){
+  try { localStorage.setItem(LOOSE_COST_KEY, JSON.stringify(looseCostLog)); }
+  catch(e) { console.error('ذخیره‌سازی ناموفق بود', e); }
+}
 async function saveSettings(){
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
   catch(e) { console.error('ذخیره‌سازی تنظیمات ناموفق بود', e); }
 }
 
-/* هزینه بر اساس نخ‌های خودت + نخ‌هایی که رفیقت برداشته حساب میشه */
+/* شمارش کل (برای هدف پاکت ۲۰تایی): نخ‌های خودت + نخ‌هایی که رفیقت برداشته */
 function dayTotal(key){ return (log[key]||0) + (friendLog[key]||0); }
 function grandTotal(){
   const keys = new Set([...Object.keys(log), ...Object.keys(friendLog)]);
   let sum = 0;
   keys.forEach(k => sum += dayTotal(k));
+  return sum;
+}
+
+/* هزینه یه روز: نخ‌های پاکتی (خودت منهای نخی‌های جدا) + نخ‌های رفیق با قیمت پاکت، به‌علاوه هزینه واقعی نخ‌های جدا */
+function dayCost(key){
+  const ppc = pricePerCig();
+  const packBased = Math.max(0, (log[key]||0) - (looseLog[key]||0)) + (friendLog[key]||0);
+  return packBased*ppc + (looseCostLog[key]||0);
+}
+function grandCost(){
+  const keys = new Set([...Object.keys(log), ...Object.keys(friendLog), ...Object.keys(looseCostLog)]);
+  let sum = 0;
+  keys.forEach(k => sum += dayCost(k));
   return sum;
 }
 
@@ -457,9 +538,9 @@ function renderHome(){
 
   document.getElementById('friend-count').textContent = toFa(friendLog[key] || 0);
 
-  const ppc = pricePerCig();
+  const cost = dayCost(key);
   const costEl = document.getElementById('cost-today');
-  costEl.innerHTML = ppc > 0 ? `هزینه امروز: <b>${faNum(dayTotal(key)*ppc)} تومان</b>` : '';
+  costEl.innerHTML = cost > 0 ? `هزینه امروز: <b>${faNum(cost)} تومان</b>` : '';
 }
 
 /* ---- rendering: stats ---- */
@@ -473,17 +554,17 @@ function renderStats(){
   for (let i=0; i<30; i++){
     const k = daysAgoKey(i);
     monthTotal += log[k] || 0;
-    costMonth += dayTotal(k);
+    costMonth += dayCost(k);
   }
-  const ppc = pricePerCig();
+  const totalCost = grandCost();
 
   document.getElementById('stat-grid').innerHTML = `
     <div class="stat-box"><div class="label">جمع کل</div><div class="value">${toFa(totalAll)}</div></div>
     <div class="stat-box"><div class="label">میانگین روزانه</div><div class="value">${toFa(Math.round(avg*10)/10)}</div></div>
     <div class="stat-box"><div class="label">این هفته</div><div class="value">${toFa(weekTotal)}</div></div>
     <div class="stat-box"><div class="label">این ماه</div><div class="value">${toFa(monthTotal)}</div></div>
-    <div class="stat-box"><div class="label">هزینه این ماه</div><div class="value" style="font-size:16px">${ppc>0 ? faNum(costMonth*ppc)+' ت' : '—'}</div></div>
-    <div class="stat-box"><div class="label">هزینه کل</div><div class="value" style="font-size:16px">${ppc>0 ? faNum(grandTotal()*ppc)+' ت' : '—'}</div></div>
+    <div class="stat-box"><div class="label">هزینه این ماه</div><div class="value" style="font-size:16px">${costMonth>0 ? faNum(costMonth)+' ت' : '—'}</div></div>
+    <div class="stat-box"><div class="label">هزینه کل</div><div class="value" style="font-size:16px">${totalCost>0 ? faNum(totalCost)+' ت' : '—'}</div></div>
   `;
 
   const last14 = [];
@@ -520,11 +601,13 @@ function renderCost(){
   const ppc = pricePerCig();
   document.getElementById('price-per-cig').textContent = ppc > 0 ? faNum(ppc) + ' تومان' : '—';
   const key = todayKey();
-  document.getElementById('cost-summary-today').textContent = ppc > 0 ? faNum(dayTotal(key)*ppc) + ' تومان' : '—';
-  let monthTotal = 0;
-  for (let i=0; i<30; i++) monthTotal += dayTotal(daysAgoKey(i));
-  document.getElementById('cost-summary-month').textContent = ppc > 0 ? faNum(monthTotal*ppc) + ' تومان' : '—';
-  document.getElementById('cost-summary-total').textContent = ppc > 0 ? faNum(grandTotal()*ppc) + ' تومان' : '—';
+  const todayCost = dayCost(key);
+  document.getElementById('cost-summary-today').textContent = todayCost > 0 ? faNum(todayCost) + ' تومان' : '—';
+  let monthCost = 0;
+  for (let i=0; i<30; i++) monthCost += dayCost(daysAgoKey(i));
+  document.getElementById('cost-summary-month').textContent = monthCost > 0 ? faNum(monthCost) + ' تومان' : '—';
+  const totalCost = grandCost();
+  document.getElementById('cost-summary-total').textContent = totalCost > 0 ? faNum(totalCost) + ' تومان' : '—';
 }
 
 function renderAll(){ renderHome(); renderStats(); renderCost(); }
@@ -636,6 +719,29 @@ async function friendMinus(){
     await saveFriendLog();
   }
 }
+function openLooseModal(){
+  const title = document.getElementById('modal-title');
+  const body = document.getElementById('modal-body');
+  const actions = document.getElementById('modal-actions');
+  title.textContent = 'ثبت نخ جدا';
+  body.innerHTML = `<div style="margin-bottom:10px">این یه نخ رو چند خریدی؟</div>
+    <input type="number" id="loose-price-input" inputmode="numeric" placeholder="قیمت این نخ (تومان)" class="modal-input">`;
+  actions.innerHTML = `<button class="modal-btn primary" id="loose-save" style="width:100%">ثبت کن</button>`;
+  document.getElementById('loose-save').onclick = async () => {
+    const v = parseFloat(document.getElementById('loose-price-input').value) || 0;
+    const key = todayKey();
+    log[key] = (log[key] || 0) + 1;
+    looseLog[key] = (looseLog[key] || 0) + 1;
+    looseCostLog[key] = (looseCostLog[key] || 0) + v;
+    await saveLog();
+    await saveLooseLog();
+    await saveLooseCostLog();
+    renderAll();
+    closePackModal();
+    await checkPackCompletion();
+  };
+  document.getElementById('pack-modal').hidden = false;
+}
 async function savePrice(){
   const pp = parseFloat(document.getElementById('pack-price').value) || 0;
   const cpp = parseInt(document.getElementById('cigs-per-pack').value) || 20;
@@ -659,6 +765,7 @@ document.getElementById('undo-btn').addEventListener('click', undoOne);
 document.getElementById('forgot-btn').addEventListener('click', addOne);
 document.getElementById('friend-plus').addEventListener('click', friendPlus);
 document.getElementById('friend-minus').addEventListener('click', friendMinus);
+document.getElementById('loose-btn').addEventListener('click', openLooseModal);
 document.getElementById('save-price-btn').addEventListener('click', savePrice);
 document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => switchView(b.dataset.view)));
 
