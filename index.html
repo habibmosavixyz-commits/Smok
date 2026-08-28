@@ -155,6 +155,43 @@
 
   .cost-today { margin-top: 16px; font-size: 13px; color: var(--ash); }
   .cost-today b { color: var(--paper); font-weight: 700; }
+  .pack-remaining { margin-top: 6px; font-size: 13px; color: var(--ash); }
+  .pack-remaining b { color: var(--paper); font-weight: 700; }
+
+  .edit-past-btn {
+    width: 100%;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    color: var(--paper);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    margin-bottom: 18px;
+  }
+  .edit-past-btn:active { opacity: 0.8; }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 90px;
+    transform: translateX(-50%) translateY(10px);
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    color: var(--paper);
+    font-family: inherit;
+    font-size: 13.5px;
+    padding: 12px 20px;
+    border-radius: 999px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    opacity: 0;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    z-index: 60;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
   .friend-card {
     width: 100%;
@@ -318,6 +355,7 @@
     <button class="undo-btn" id="undo-btn">اصلاح آخرین ثبت</button>
     <button class="forgot-btn" id="forgot-btn">یه نخی که مطمئن نبودم رو هم ثبت کن</button>
     <div class="cost-today" id="cost-today"></div>
+    <div class="pack-remaining" id="pack-remaining"></div>
 
     <div class="friend-card">
       <div class="friend-text">رفیقت از پاکتت برداشت؟</div>
@@ -340,6 +378,7 @@
 
 <div class="view" id="view-stats">
   <h1>آمار</h1>
+  <button class="edit-past-btn" id="edit-past-btn">ثبت یا اصلاح نخ‌های یه روز گذشته</button>
   <div class="stat-grid" id="stat-grid"></div>
   <div class="section-title">۱۴ روز اخیر</div>
   <div class="chart-wrap" id="chart-wrap"></div>
@@ -382,6 +421,8 @@
     <div class="modal-actions" id="modal-actions"></div>
   </div>
 </div>
+
+<div class="toast" id="toast"></div>
 
 <script>
 const LOG_KEY = 'smoke-log';
@@ -528,6 +569,19 @@ function pricePerCig(){
   const cigs = settings.cigsPerPack > 0 ? settings.cigsPerPack : 20;
   return settings.packPrice > 0 ? settings.packPrice / cigs : 0;
 }
+function packRemaining(){
+  const cpp = settings.cigsPerPack || 20;
+  const used = grandTotal() % cpp;
+  return cpp - used;
+}
+let toastTimer = null;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
 function renderHome(){
   const key = todayKey();
   const count = log[key] || 0;
@@ -541,6 +595,8 @@ function renderHome(){
   const cost = dayCost(key);
   const costEl = document.getElementById('cost-today');
   costEl.innerHTML = cost > 0 ? `هزینه امروز: <b>${faNum(cost)} تومان</b>` : '';
+
+  document.getElementById('pack-remaining').innerHTML = `باقی‌مونده این پاکت: <b>${toFa(packRemaining())} نخ</b>`;
 }
 
 /* ---- rendering: stats ---- */
@@ -569,15 +625,11 @@ function renderStats(){
 
   const last14 = [];
   for (let i=13; i>=0; i--) last14.push(daysAgoKey(i));
-  const max = Math.max(1, ...last14.map(k => log[k] || 0));
-  document.getElementById('chart-wrap').innerHTML = last14.map(k => {
-    const v = log[k] || 0;
-    const h = Math.max(3, Math.round((v/max)*100));
-    return `<div class="bar-col"><div class="bar" style="height:${h}%"></div></div>`;
-  }).join('');
+  const values = last14.map(k => log[k] || 0);
+  document.getElementById('chart-wrap').innerHTML = buildLineChartSVG(values);
   document.getElementById('chart-labels').innerHTML = last14.map(k => {
     const d = keyToDate(k);
-    return `<span>${toFa(d.getDate())}</span>`;
+    return `<span>${new Intl.DateTimeFormat('fa-IR', {day:'numeric'}).format(d)}</span>`;
   }).join('');
 
   const todK = todayKey();
@@ -587,11 +639,33 @@ function renderStats(){
     ? '<div class="empty-note">هنوز روز کاملی ثبت نشده</div>'
     : histKeys.slice(0,60).map(k => {
         const { weekday, day } = formatDateLabel(k);
-        return `<div class="day-row">
+        return `<div class="day-row" data-key="${k}" style="cursor:pointer">
           <div class="day-label">${weekday}<br><span style="color:var(--ash);font-size:12px">${day}</span></div>
           <div class="day-total">${toFa(log[k])}</div>
         </div>`;
       }).join('');
+  listEl.querySelectorAll('.day-row').forEach(row => {
+    row.addEventListener('click', () => openEditPastModal(row.dataset.key));
+  });
+}
+
+function buildLineChartSVG(values){
+  const W = 300, H = 110, PAD = 8;
+  const max = Math.max(1, ...values);
+  const stepX = values.length > 1 ? (W - PAD*2) / (values.length - 1) : 0;
+  const pts = values.map((v,i) => {
+    const x = PAD + i*stepX;
+    const y = H - PAD - (v/max)*(H - PAD*2);
+    return { x, y };
+  });
+  const line = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const area = `${PAD},${H-PAD} ` + line + ` ${W-PAD},${H-PAD}`;
+  const dots = pts.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" style="fill:var(--accent)"/>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:110px;overflow:visible">
+    <polygon points="${area}" style="fill:var(--accent);opacity:0.12"/>
+    <polyline points="${line}" style="fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round"/>
+    ${dots}
+  </svg>`;
 }
 
 /* ---- rendering: cost ---- */
@@ -645,6 +719,37 @@ function showPriceInput(body, actions){
 }
 function closePackModal(){ document.getElementById('pack-modal').hidden = true; }
 
+function openEditPastModal(prefillKey){
+  const title = document.getElementById('modal-title');
+  const body = document.getElementById('modal-body');
+  const actions = document.getElementById('modal-actions');
+  title.textContent = 'ثبت یا اصلاح یه روز گذشته';
+  const dateVal = prefillKey || '';
+  body.innerHTML = `
+    <div style="margin-bottom:10px;text-align:right">تاریخ رو انتخاب کن و تعداد نخ اون روز رو وارد کن</div>
+    <input type="date" id="edit-date-input" class="modal-input" max="${todayKey()}" value="${dateVal}">
+    <input type="number" id="edit-count-input" inputmode="numeric" placeholder="تعداد نخ" class="modal-input" style="margin-top:8px" value="${prefillKey ? (log[prefillKey]||0) : ''}">
+  `;
+  actions.innerHTML = `<button class="modal-btn primary" id="edit-save" style="width:100%">ذخیره</button>`;
+
+  const dateInput = document.getElementById('edit-date-input');
+  const countInput = document.getElementById('edit-count-input');
+  dateInput.addEventListener('change', () => {
+    countInput.value = log[dateInput.value] || '';
+  });
+
+  document.getElementById('edit-save').onclick = async () => {
+    const dateKey = dateInput.value;
+    if (!dateKey || dateKey > todayKey()) return;
+    const v = Math.max(0, parseInt(countInput.value) || 0);
+    if (v === 0) delete log[dateKey]; else log[dateKey] = v;
+    await saveLog();
+    renderAll();
+    closePackModal();
+  };
+  document.getElementById('pack-modal').hidden = false;
+}
+
 /* ---- interactions ---- */
 function spawnParticles(anchorEl, color){
   const rect = anchorEl.getBoundingClientRect();
@@ -693,6 +798,7 @@ async function addOne(){
   spawnParticles(document.getElementById('tap-btn'), btnColor(log[key]));
   await saveLog();
   await checkPackCompletion();
+  if (log[key] > 20) showToast('دیگه کافیه، به خودت استراحت بده 🤍');
 }
 async function undoOne(){
   const key = todayKey();
@@ -739,6 +845,7 @@ function openLooseModal(){
     renderAll();
     closePackModal();
     await checkPackCompletion();
+    if (log[key] > 20) showToast('دیگه کافیه، به خودت استراحت بده 🤍');
   };
   document.getElementById('pack-modal').hidden = false;
 }
@@ -766,6 +873,7 @@ document.getElementById('forgot-btn').addEventListener('click', addOne);
 document.getElementById('friend-plus').addEventListener('click', friendPlus);
 document.getElementById('friend-minus').addEventListener('click', friendMinus);
 document.getElementById('loose-btn').addEventListener('click', openLooseModal);
+document.getElementById('edit-past-btn').addEventListener('click', () => openEditPastModal(null));
 document.getElementById('save-price-btn').addEventListener('click', savePrice);
 document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => switchView(b.dataset.view)));
 
@@ -784,3 +892,4 @@ if ('serviceWorker' in navigator) {
 </script>
 </body>
 </html>
+
