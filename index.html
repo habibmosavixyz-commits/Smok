@@ -268,16 +268,48 @@
   .stat-box .label { font-size: 12px; color: var(--ash); margin-bottom: 6px; }
   .stat-box .value { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
   .section-title { font-size: 13px; font-weight: 600; color: var(--ash); margin-bottom: 12px; letter-spacing: 0.4px; }
-  .chart-wrap { display: flex; align-items: flex-end; gap: 5px; height: 120px; margin-bottom: 8px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  .chart-wrap { display: flex; align-items: flex-end; gap: 5px; height: 120px; margin-bottom: 8px; border-bottom: 1px solid var(--line); padding-bottom: 6px; direction: ltr; }
   .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
   .bar { width: 100%; max-width: 18px; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 3px; }
-  .bar-day-labels { display: flex; gap: 5px; margin-bottom: 24px; }
+  .bar-day-labels { display: flex; gap: 5px; margin-bottom: 24px; direction: ltr; }
   .bar-day-labels span { flex: 1; text-align: center; font-size: 10px; color: var(--ash); }
   .day-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--line); }
   .day-row:last-child { border-bottom: none; }
   .day-row .day-label { font-size: 14px; min-width: 78px; }
   .day-row .day-total { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .empty-note { color: var(--ash); font-size: 13px; text-align: center; padding: 16px 0; }
+
+  .hour-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+  }
+  .hour-row .hour-label {
+    font-size: 13px;
+    min-width: 62px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ash);
+  }
+  .hour-row .hour-bar-track {
+    flex: 1;
+    height: 10px;
+    background: var(--bg-soft);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .hour-row .hour-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 999px;
+  }
+  .hour-row .hour-count {
+    font-size: 13px;
+    font-weight: 700;
+    min-width: 24px;
+    text-align: left;
+    font-variant-numeric: tabular-nums;
+  }
 
   /* ---------- COST ---------- */
   #view-cost { padding: 10px 24px 30px; }
@@ -367,6 +399,16 @@
       <div class="friend-note">فقط تو هزینه‌ها حساب میشه، تو شمارش امروزت نه</div>
     </div>
 
+    <div class="friend-card">
+      <div class="friend-text">یه نخ از دوستت گرفتی؟</div>
+      <div class="friend-row">
+        <button class="friend-btn" id="gift-minus">−</button>
+        <div class="friend-count" id="gift-count">۰</div>
+        <button class="friend-btn" id="gift-plus">+</button>
+      </div>
+      <div class="friend-note">تو شمارش امروزت حساب میشه، ولی هزینه‌ای برات نداره</div>
+    </div>
+
     <div class="loose-card">
       <div class="friend-text">یه نخ جدا (نخی) با قیمت دیگه خریدی؟</div>
       <button class="loose-btn" id="loose-btn">ثبت با قیمت دیگه</button>
@@ -380,6 +422,8 @@
   <h1>آمار</h1>
   <button class="edit-past-btn" id="edit-past-btn">ثبت یا اصلاح نخ‌های یه روز گذشته</button>
   <div class="stat-grid" id="stat-grid"></div>
+  <div class="section-title">پرمصرف‌ترین ساعت‌های روزت</div>
+  <div id="hour-stats"></div>
   <div class="section-title">۱۴ روز اخیر</div>
   <div class="chart-wrap" id="chart-wrap"></div>
   <div class="bar-day-labels" id="chart-labels"></div>
@@ -429,6 +473,9 @@ const LOG_KEY = 'smoke-log';
 const FRIEND_KEY = 'friend-log';
 const LOOSE_KEY = 'loose-log';
 const LOOSE_COST_KEY = 'loose-cost-log';
+const HOUR_KEY = 'hour-log';
+const GIFT_KEY = 'gift-log';
+const PRICE_HISTORY_KEY = 'price-history';
 const SETTINGS_KEY = 'smoke-settings';
 const faDigits = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
 function toFa(n){ return String(n).split('').map(d => faDigits[d] ?? d).join(''); }
@@ -471,6 +518,9 @@ let log = {};
 let friendLog = {};
 let looseLog = {};
 let looseCostLog = {};
+let hourLog = {};
+let giftLog = {};
+let priceHistory = {};
 let settings = { packPrice: 0, cigsPerPack: 20, packPromptCount: 0 };
 
 /* ذخیره‌سازی محلی روی خود گوشی (بدون نیاز به اینترنت) */
@@ -492,9 +542,32 @@ async function loadAll(){
     looseCostLog = raw ? JSON.parse(raw) : {};
   } catch(e) { looseCostLog = {}; }
   try {
+    const raw = localStorage.getItem(HOUR_KEY);
+    hourLog = raw ? JSON.parse(raw) : {};
+  } catch(e) { hourLog = {}; }
+  try {
+    const raw = localStorage.getItem(GIFT_KEY);
+    giftLog = raw ? JSON.parse(raw) : {};
+  } catch(e) { giftLog = {}; }
+  try {
+    const raw = localStorage.getItem(PRICE_HISTORY_KEY);
+    priceHistory = raw ? JSON.parse(raw) : {};
+  } catch(e) { priceHistory = {}; }
+  try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (raw) settings = Object.assign({ packPrice:0, cigsPerPack:20, packPromptCount:0 }, JSON.parse(raw));
   } catch(e) { /* keep defaults */ }
+
+  /* اگه از قبل قیمتی تنظیم شده ولی هنوز تاریخچه‌ای نداره، یه نقطه شروع براش می‌سازیم
+     تا هزینه روزهای گذشته با تغییر بعدی قیمت عوض نشه */
+  if (Object.keys(priceHistory).length === 0 && settings.packPrice > 0){
+    const cigs = settings.cigsPerPack > 0 ? settings.cigsPerPack : 20;
+    const ppc = settings.packPrice / cigs;
+    const dates = Object.keys(log).sort();
+    const seedDate = dates.length > 0 ? dates[0] : todayKey();
+    priceHistory[seedDate] = ppc;
+    await savePriceHistory();
+  }
 }
 async function saveLog(){
   try { localStorage.setItem(LOG_KEY, JSON.stringify(log)); }
@@ -503,6 +576,42 @@ async function saveLog(){
 async function saveFriendLog(){
   try { localStorage.setItem(FRIEND_KEY, JSON.stringify(friendLog)); }
   catch(e) { console.error('ذخیره‌سازی ناموفق بود', e); }
+}
+async function saveHourLog(){
+  try { localStorage.setItem(HOUR_KEY, JSON.stringify(hourLog)); }
+  catch(e) { console.error('ذخیره‌سازی ناموفق بود', e); }
+}
+function logHour(){
+  const h = String(new Date().getHours());
+  hourLog[h] = (hourLog[h] || 0) + 1;
+  saveHourLog();
+}
+async function saveGiftLog(){
+  try { localStorage.setItem(GIFT_KEY, JSON.stringify(giftLog)); }
+  catch(e) { console.error('ذخیره‌سازی ناموفق بود', e); }
+}
+async function savePriceHistory(){
+  try { localStorage.setItem(PRICE_HISTORY_KEY, JSON.stringify(priceHistory)); }
+  catch(e) { console.error('ذخیره‌سازی ناموفق بود', e); }
+}
+/* قیمتی که تو یه روز خاص معتبر بوده رو برمی‌گردونه، نه قیمت فعلی -
+   این‌جوری تغییر قیمت روی هزینه روزهای قبل اثر نمیذاره */
+function priceForDay(key){
+  const dates = Object.keys(priceHistory).sort();
+  let applicable = null;
+  for (const d of dates){
+    if (d <= key) applicable = priceHistory[d]; else break;
+  }
+  if (applicable === null && dates.length > 0) applicable = priceHistory[dates[0]];
+  return applicable || 0;
+}
+async function recordPriceIfChanged(){
+  const newPrice = pricePerCig();
+  const today = todayKey();
+  if (newPrice !== priceForDay(today)){
+    priceHistory[today] = newPrice;
+    await savePriceHistory();
+  }
 }
 async function saveLooseLog(){
   try { localStorage.setItem(LOOSE_KEY, JSON.stringify(looseLog)); }
@@ -526,11 +635,11 @@ function grandTotal(){
   return sum;
 }
 
-/* هزینه یه روز: نخ‌های پاکتی (خودت منهای نخی‌های جدا) + نخ‌های رفیق با قیمت پاکت، به‌علاوه هزینه واقعی نخ‌های جدا */
+/* هزینه یه روز: نخ‌های پاکتی (خودت منهای نخی‌های جدا و هدیه‌ای) + نخ‌های رفیق، با قیمتی که همون روز معتبر بوده؛ به‌علاوه هزینه واقعی نخ‌های جدا */
 function dayCost(key){
-  const ppc = pricePerCig();
-  const packBased = Math.max(0, (log[key]||0) - (looseLog[key]||0)) + (friendLog[key]||0);
-  return packBased*ppc + (looseCostLog[key]||0);
+  const price = priceForDay(key);
+  const packBased = Math.max(0, (log[key]||0) - (looseLog[key]||0) - (giftLog[key]||0)) + (friendLog[key]||0);
+  return packBased*price + (looseCostLog[key]||0);
 }
 function grandCost(){
   const keys = new Set([...Object.keys(log), ...Object.keys(friendLog), ...Object.keys(looseCostLog)]);
@@ -591,6 +700,7 @@ function renderHome(){
   document.getElementById('today-date').textContent = weekday + '، ' + day;
 
   document.getElementById('friend-count').textContent = toFa(friendLog[key] || 0);
+  document.getElementById('gift-count').textContent = toFa(giftLog[key] || 0);
 
   const cost = dayCost(key);
   const costEl = document.getElementById('cost-today');
@@ -623,6 +733,8 @@ function renderStats(){
     <div class="stat-box"><div class="label">هزینه کل</div><div class="value" style="font-size:16px">${totalCost>0 ? faNum(totalCost)+' ت' : '—'}</div></div>
   `;
 
+  renderHourStats();
+
   const last14 = [];
   for (let i=13; i>=0; i--) last14.push(daysAgoKey(i));
   const values = last14.map(k => log[k] || 0);
@@ -649,6 +761,26 @@ function renderStats(){
   });
 }
 
+function renderHourStats(){
+  const el = document.getElementById('hour-stats');
+  const entries = Object.entries(hourLog).map(([h,c]) => [parseInt(h), c]).filter(([,c]) => c > 0);
+  if (entries.length === 0){
+    el.innerHTML = '<div class="empty-note">هنوز داده کافی نیست</div>';
+    return;
+  }
+  entries.sort((a,b) => b[1]-a[1]);
+  const top = entries.slice(0, 5);
+  const max = top[0][1];
+  el.innerHTML = top.map(([h,c]) => {
+    const label = toFa(h) + ' تا ' + toFa((h+1)%24);
+    const pct = Math.max(6, Math.round((c/max)*100));
+    return `<div class="hour-row">
+      <div class="hour-label">${label}</div>
+      <div class="hour-bar-track"><div class="hour-bar-fill" style="width:${pct}%"></div></div>
+      <div class="hour-count">${toFa(c)}</div>
+    </div>`;
+  }).join('');
+}
 function buildLineChartSVG(values){
   const W = 300, H = 110, PAD = 8;
   const max = Math.max(1, ...values);
@@ -713,6 +845,7 @@ function showPriceInput(body, actions){
     const v = parseFloat(document.getElementById('modal-price-input').value) || 0;
     settings.packPrice = v;
     await saveSettings();
+    await recordPriceIfChanged();
     renderAll();
     closePackModal();
   };
@@ -791,6 +924,7 @@ async function checkPackCompletion(){
 async function addOne(){
   const key = todayKey();
   log[key] = (log[key] || 0) + 1;
+  logHour();
   renderAll();
   const numEl = document.getElementById('count-number');
   numEl.classList.add('pulse');
@@ -825,6 +959,31 @@ async function friendMinus(){
     await saveFriendLog();
   }
 }
+async function giftPlus(){
+  const key = todayKey();
+  log[key] = (log[key] || 0) + 1;
+  giftLog[key] = (giftLog[key] || 0) + 1;
+  logHour();
+  renderAll();
+  await saveLog();
+  await saveGiftLog();
+  await checkPackCompletion();
+  if (log[key] > 20) showToast('دیگه کافیه، به خودت استراحت بده 🤍');
+}
+async function giftMinus(){
+  const key = todayKey();
+  if ((giftLog[key] || 0) > 0){
+    giftLog[key] -= 1;
+    if (giftLog[key] === 0) delete giftLog[key];
+    if ((log[key] || 0) > 0){
+      log[key] -= 1;
+      if (log[key] === 0) delete log[key];
+    }
+    renderAll();
+    await saveGiftLog();
+    await saveLog();
+  }
+}
 function openLooseModal(){
   const title = document.getElementById('modal-title');
   const body = document.getElementById('modal-body');
@@ -839,6 +998,7 @@ function openLooseModal(){
     log[key] = (log[key] || 0) + 1;
     looseLog[key] = (looseLog[key] || 0) + 1;
     looseCostLog[key] = (looseCostLog[key] || 0) + v;
+    logHour();
     await saveLog();
     await saveLooseLog();
     await saveLooseCostLog();
@@ -855,7 +1015,8 @@ async function savePrice(){
   settings.packPrice = pp;
   settings.cigsPerPack = cpp;
   await saveSettings();
-  renderHome(); renderCost();
+  await recordPriceIfChanged();
+  renderHome(); renderStats(); renderCost();
   const note = document.getElementById('saved-note');
   note.textContent = 'ذخیره شد';
   setTimeout(() => note.textContent = '', 1800);
@@ -872,6 +1033,8 @@ document.getElementById('undo-btn').addEventListener('click', undoOne);
 document.getElementById('forgot-btn').addEventListener('click', addOne);
 document.getElementById('friend-plus').addEventListener('click', friendPlus);
 document.getElementById('friend-minus').addEventListener('click', friendMinus);
+document.getElementById('gift-plus').addEventListener('click', giftPlus);
+document.getElementById('gift-minus').addEventListener('click', giftMinus);
 document.getElementById('loose-btn').addEventListener('click', openLooseModal);
 document.getElementById('edit-past-btn').addEventListener('click', () => openEditPastModal(null));
 document.getElementById('save-price-btn').addEventListener('click', savePrice);
@@ -892,4 +1055,3 @@ if ('serviceWorker' in navigator) {
 </script>
 </body>
 </html>
-
