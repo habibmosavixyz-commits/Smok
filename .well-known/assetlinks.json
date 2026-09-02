@@ -1,8 +1,17 @@
-[{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "io.github.habibmosavixyz_commits.twa",
-        "sha256_cert_fingerprints": ["05:CC:63:A5:18:C1:A3:12:B1:E1:6C:87:F9:F8:15:56:25:C3:07:98:FF:65:8E:69:04:19:90:9D:86:D2:4D:8B"]
-      }
-    }]
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "io.github.habibmosavixyz_commits.twa",
+      "sha256_cert_fingerprints": ["05:CC:93:A5:1A:C1:A3:12:B1:E1:9C:A7:F9:FA:15:56:25:C3:07:9A:FF:56:AE:99:0F:19:90:9D:A6:D4:FD:AB"]
+    }
+  },
+  {
+    "relation": ["check_validation"],
+    "target": {
+      "namespace": "cafebazaar_twa",
+      "package_name": "io.github.habibmosavixyz_commits.twa"
+    }
+  }
+]
