@@ -626,8 +626,13 @@ async function saveSettings(){
   catch(e) { console.error('ذخیره‌سازی تنظیمات ناموفق بود', e); }
 }
 
-/* شمارش کل (برای هدف پاکت ۲۰تایی): نخ‌های خودت + نخ‌هایی که رفیقت برداشته */
-function dayTotal(key){ return (log[key]||0) + (friendLog[key]||0); }
+/* شمارش کل (برای هدف پاکت ۲۰تایی): فقط نخ‌هایی که واقعاً از پاکت خودت کم شده -
+   یعنی ثبت با دکمه اصلی/دکمه فراموشی، به‌علاوه نخ‌هایی که رفیقت از پاکتت برداشته.
+   نخ جدا (نخی) و نخ هدیه‌ای از دوست، چون از پاکت خودت نیست، حساب نمیشه. */
+function dayTotal(key){
+  const packBased = Math.max(0, (log[key]||0) - (looseLog[key]||0) - (giftLog[key]||0));
+  return packBased + (friendLog[key]||0);
+}
 function grandTotal(){
   const keys = new Set([...Object.keys(log), ...Object.keys(friendLog)]);
   let sum = 0;
@@ -1055,3 +1060,4 @@ if ('serviceWorker' in navigator) {
 </script>
 </body>
 </html>
+
