@@ -699,9 +699,13 @@ function pricePerCig(){
   const cigs = settings.cigsPerPack > 0 ? settings.cigsPerPack : 20;
   return settings.packPrice > 0 ? settings.packPrice / cigs : 0;
 }
+/* عدد خامی که برای شمارش پاکت استفاده میشه: جمع کل واقعی + هر تنظیمی که با کالیبره کردن دستی اضافه شده */
+function packUsedTotal(){
+  return grandTotal() + (settings.packOffset || 0);
+}
 function packRemaining(){
   const cpp = settings.cigsPerPack || 20;
-  const used = grandTotal() % cpp;
+  const used = packUsedTotal() % cpp;
   return cpp - used;
 }
 let toastTimer = null;
@@ -784,16 +788,24 @@ function renderStats(){
 
 function renderHourStats(){
   const el = document.getElementById('hour-stats');
-  const entries = Object.entries(hourLog).map(([h,c]) => [parseInt(h), c]).filter(([,c]) => c > 0);
+  const buckets = {};
+  for (let h = 0; h < 24; h++){
+    const c = hourLog[String(h)] || 0;
+    if (c > 0){
+      const b = Math.floor(h / 4);
+      buckets[b] = (buckets[b] || 0) + c;
+    }
+  }
+  const entries = Object.entries(buckets).map(([b,c]) => [parseInt(b), c]);
   if (entries.length === 0){
     el.innerHTML = '<div class="empty-note">هنوز داده کافی نیست</div>';
     return;
   }
   entries.sort((a,b) => b[1]-a[1]);
-  const top = entries.slice(0, 5);
-  const max = top[0][1];
-  el.innerHTML = top.map(([h,c]) => {
-    const label = toFa(h) + ' تا ' + toFa((h+1)%24);
+  const max = entries[0][1];
+  el.innerHTML = entries.map(([b,c]) => {
+    const startH = b*4, endH = (b*4+4) % 24;
+    const label = toFa(startH) + ' تا ' + toFa(endH);
     const pct = Math.max(6, Math.round((c/max)*100));
     return `<div class="hour-row">
       <div class="hour-label">${label}</div>
@@ -881,11 +893,23 @@ function openPackSizeModal(){
   body.innerHTML = `
     <div style="margin-bottom:10px">تعداد نخ تو هر پاکتت چندتاست؟</div>
     <input type="number" id="packsize-input" inputmode="numeric" class="modal-input" value="${settings.cigsPerPack || 20}">
+    <div style="margin-top:14px;margin-bottom:10px">الان واقعاً چند نخ از پاکت دستت باقی مونده؟ (اختیاری - برای هماهنگ کردن با پاکت واقعیت)</div>
+    <input type="number" id="packsize-calibrate" inputmode="numeric" class="modal-input" placeholder="مثلاً ۱۹">
   `;
   actions.innerHTML = `<button class="modal-btn primary" id="packsize-save" style="width:100%">ذخیره</button>`;
   document.getElementById('packsize-save').onclick = async () => {
     const v = Math.max(1, parseInt(document.getElementById('packsize-input').value) || 20);
     settings.cigsPerPack = v;
+
+    const calVal = document.getElementById('packsize-calibrate').value;
+    if (calVal !== ''){
+      const remaining = Math.max(0, Math.min(v, parseInt(calVal) || 0));
+      const desiredUsed = v - remaining;
+      const currentUsed = ((grandTotal() + (settings.packOffset || 0)) % v + v) % v;
+      settings.packOffset = (settings.packOffset || 0) + (desiredUsed - currentUsed);
+      settings.packPromptCount = Math.floor(packUsedTotal() / v);
+    }
+
     await saveSettings();
     await recordPriceIfChanged();
     renderAll();
@@ -997,7 +1021,7 @@ function spawnParticles(anchorEl, color){
 
 async function checkPackCompletion(){
   const cpp = settings.cigsPerPack || 20;
-  const packsCompleted = Math.floor(grandTotal() / cpp);
+  const packsCompleted = Math.floor(packUsedTotal() / cpp);
   if (packsCompleted > (settings.packPromptCount || 0)){
     settings.packPromptCount = packsCompleted;
     await saveSettings();
