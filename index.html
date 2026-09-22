@@ -18,6 +18,7 @@
     --paper: #F2EEE7;
     --line: #35312F;
     --accent: #C1502E;
+    --coffee: #4FA3C4;
   }
 
   html, body {
@@ -43,6 +44,23 @@
 
   .view { display: none; flex: 1; flex-direction: column; }
   .view.active { display: flex; }
+
+  /* ---------- GOAL BANNER (top of home) ---------- */
+  .goal-banner {
+    width: 100%;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    display: none;
+  }
+  .goal-row { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--ash); margin: 5px 0; }
+  .goal-row .goal-label { min-width: 32px; }
+  .goal-row .goal-text { min-width: 46px; text-align: left; font-variant-numeric: tabular-nums; }
+  .goal-track { flex: 1; height: 8px; background: var(--bg); border-radius: 999px; overflow: hidden; }
+  .goal-fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width 0.3s ease, background 0.3s ease; width: 0%; }
+  .goal-fill.coffee-fill { background: var(--coffee); }
 
   /* ---------- HOME ---------- */
   #view-home { align-items: center; padding: 10px 24px 20px; }
@@ -275,6 +293,8 @@
   .stat-box .label { font-size: 12px; color: var(--ash); margin-bottom: 6px; }
   .stat-box .value { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
   .section-title { font-size: 13px; font-weight: 600; color: var(--ash); margin-bottom: 12px; letter-spacing: 0.4px; }
+  .chart-legend { display: flex; gap: 16px; margin-bottom: 10px; font-size: 11px; color: var(--ash); }
+  .chart-legend .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-left: 5px; }
   .chart-wrap { display: flex; align-items: flex-end; gap: 5px; height: 120px; margin-bottom: 8px; border-bottom: 1px solid var(--line); padding-bottom: 6px; direction: ltr; }
   .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
   .bar { width: 100%; max-width: 18px; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 3px; }
@@ -322,8 +342,12 @@
   #view-coffee { padding: 10px 24px 30px; overflow-y: auto; }
   #view-coffee h1 { font-size: 18px; font-weight: 700; margin-bottom: 18px; }
 
+  /* ---------- GOAL ---------- */
+  #view-goal { padding: 10px 24px 30px; overflow-y: auto; }
+  #view-goal h1 { font-size: 18px; font-weight: 700; margin-bottom: 18px; }
+
   /* ---------- COST ---------- */
-  #view-cost { padding: 10px 24px 30px; }
+  #view-cost { padding: 10px 24px 30px; overflow-y: auto; }
   #view-cost h1 { font-size: 18px; font-weight: 700; margin-bottom: 18px; }
   .field { margin-bottom: 16px; }
   .field label { display: block; font-size: 13px; color: var(--ash); margin-bottom: 8px; }
@@ -352,7 +376,7 @@
     position: fixed; bottom: 0; left: 0; right: 0; max-width: 480px; margin: 0 auto;
     display: flex; background: var(--bg-soft); border-top: 1px solid var(--line);
   }
-  nav.tabs button { flex: 1; background: none; border: none; color: var(--ash); font-family: inherit; font-size: 12.5px; padding: 14px 0 12px; cursor: pointer; }
+  nav.tabs button { flex: 1; background: none; border: none; color: var(--ash); font-family: inherit; font-size: 11.5px; padding: 14px 0 12px; cursor: pointer; }
   nav.tabs button.active { color: var(--paper); font-weight: 700; }
 
   /* ---------- MODAL ---------- */
@@ -364,8 +388,22 @@
   .modal-overlay[hidden] { display: none; }
   .modal-card {
     width: 100%; max-width: 340px; background: var(--bg-soft);
-    border: 1px solid var(--line); border-radius: 18px; padding: 22px;
+    border: 1px solid var(--line); border-radius: 18px; padding: 32px 22px 22px;
+    position: relative;
   }
+  .modal-close {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: var(--ash);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 6px 10px;
+  }
+  .modal-close:active { opacity: 0.7; }
   .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 10px; text-align: center; }
   .modal-body { font-size: 14px; color: var(--paper); line-height: 1.8; text-align: center; margin-bottom: 18px; }
   .modal-input {
@@ -384,6 +422,18 @@
 <header><div class="date" id="today-date"></div></header>
 
 <div class="view active" id="view-home">
+  <div class="goal-banner" id="goal-banner">
+    <div class="goal-row" id="goal-row-cig" style="display:none">
+      <span class="goal-label">سیگار</span>
+      <div class="goal-track"><div class="goal-fill" id="goal-fill-cig"></div></div>
+      <span class="goal-text" id="goal-text-cig"></span>
+    </div>
+    <div class="goal-row" id="goal-row-coffee" style="display:none">
+      <span class="goal-label">قهوه</span>
+      <div class="goal-track"><div class="goal-fill coffee-fill" id="goal-fill-coffee"></div></div>
+      <span class="goal-text" id="goal-text-coffee"></span>
+    </div>
+  </div>
   <div class="message-card" id="daily-message"></div>
   <main class="center">
     <div class="count-label">امروز</div>
@@ -452,6 +502,20 @@
   </div>
 </div>
 
+<div class="view" id="view-goal">
+  <h1>هدف</h1>
+  <div class="field">
+    <label>هدف تعداد سیگار امروز</label>
+    <input type="number" id="goal-cig-input" inputmode="numeric" placeholder="مثلاً ۲۴">
+  </div>
+  <div class="field">
+    <label>هدف تعداد قهوه امروز</label>
+    <input type="number" id="goal-coffee-input" inputmode="numeric" placeholder="مثلاً ۲">
+  </div>
+  <button class="save-btn" id="goal-save-btn">ذخیره هدف</button>
+  <div class="saved-note" id="goal-saved-note"></div>
+</div>
+
 <div class="view" id="view-stats">
   <h1>آمار</h1>
   <button class="edit-past-btn" id="edit-past-btn">ثبت یا اصلاح کامل یه روز (امروز هم میشه)</button>
@@ -461,6 +525,10 @@
   <div class="section-title">پرمصرف‌ترین ساعت‌های روزت</div>
   <div id="hour-stats"></div>
   <div class="section-title">۱۴ روز اخیر</div>
+  <div class="chart-legend">
+    <span><span class="dot" style="background:var(--accent)"></span>سیگار</span>
+    <span><span class="dot" style="background:var(--coffee)"></span>قهوه</span>
+  </div>
   <div class="chart-wrap" id="chart-wrap"></div>
   <div class="bar-day-labels" id="chart-labels"></div>
   <div class="section-title">تاریخچه روزانه</div>
@@ -492,6 +560,17 @@
     <div class="row grand"><span>مجموع کل (سیگار و قهوه)</span><b id="grand-total-cost">—</b></div>
   </div>
 
+  <div class="section-title" style="margin-top:28px">موجودی</div>
+  <div class="field">
+    <label>مبلغ واریزی (مثلاً حقوق)</label>
+    <input type="number" id="income-input" inputmode="numeric" placeholder="مثلاً ۵۰۰۰۰۰۰">
+  </div>
+  <button class="save-btn" id="income-save-btn">ثبت واریزی</button>
+  <div class="cost-summary">
+    <div class="row"><span>مجموع واریزی‌ها</span><b id="income-total">—</b></div>
+    <div class="row grand"><span>باقی‌مونده</span><b id="wallet-remaining">—</b></div>
+  </div>
+
   <div class="section-title" style="margin-top:28px">پشتیبان‌گیری از اطلاعات</div>
   <div class="backup-note">اگه اپ رو پاک کنی یا گوشی عوض کنی، بدون این کد همه اطلاعاتت از بین میره. یه کد بگیر و یه‌جای امن (مثلاً پیام به خودت تو تلگرام) نگهش دار.</div>
   <button class="save-btn" id="backup-btn" style="background:var(--bg-soft);border:1px solid var(--line);color:var(--paper);margin-top:10px">دریافت کد پشتیبان</button>
@@ -501,12 +580,14 @@
 <nav class="tabs">
   <button class="tab-btn active" data-view="home">امروز</button>
   <button class="tab-btn" data-view="coffee">قهوه</button>
+  <button class="tab-btn" data-view="goal">هدف</button>
   <button class="tab-btn" data-view="stats">آمار</button>
   <button class="tab-btn" data-view="cost">هزینه</button>
 </nav>
 
 <div class="modal-overlay" id="pack-modal" hidden>
   <div class="modal-card">
+    <button class="modal-close" id="modal-close-btn" aria-label="بستن">×</button>
     <div class="modal-title" id="modal-title"></div>
     <div class="modal-body" id="modal-body"></div>
     <div class="modal-actions" id="modal-actions"></div>
@@ -527,6 +608,7 @@ const SETTINGS_KEY = 'smoke-settings';
 const COFFEE_SINGLE_KEY = 'coffee-single-log';
 const COFFEE_DOUBLE_KEY = 'coffee-double-log';
 const COFFEE_COST_KEY = 'coffee-cost-log';
+const INCOME_KEY = 'income-log';
 const faDigits = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
 function toFa(n){ return String(n).split('').map(d => faDigits[d] ?? d).join(''); }
 function faNum(n){ return new Intl.NumberFormat('fa-IR').format(Math.round(n)); }
@@ -571,10 +653,11 @@ let looseCostLog = {};
 let hourLog = {};
 let giftLog = {};
 let priceHistory = {};
-let settings = { packPrice: 0, cigsPerPack: 20, packPromptCount: 0 };
+let settings = { packPrice: 0, cigsPerPack: 20, packPromptCount: 0, goalCig: 0, goalCoffee: 0 };
 let coffeeSingleLog = {};
 let coffeeDoubleLog = {};
 let coffeeCostLog = {};
+let incomeEntries = [];
 
 /* ذخیره‌سازی محلی روی خود گوشی (بدون نیاز به اینترنت) */
 async function loadAll(){
@@ -608,7 +691,7 @@ async function loadAll(){
   } catch(e) { priceHistory = {}; }
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if (raw) settings = Object.assign({ packPrice:0, cigsPerPack:20, packPromptCount:0 }, JSON.parse(raw));
+    if (raw) settings = Object.assign({ packPrice:0, cigsPerPack:20, packPromptCount:0, goalCig:0, goalCoffee:0 }, JSON.parse(raw));
   } catch(e) { /* keep defaults */ }
   try {
     const raw = localStorage.getItem(COFFEE_SINGLE_KEY);
@@ -622,6 +705,10 @@ async function loadAll(){
     const raw = localStorage.getItem(COFFEE_COST_KEY);
     coffeeCostLog = raw ? JSON.parse(raw) : {};
   } catch(e) { coffeeCostLog = {}; }
+  try {
+    const raw = localStorage.getItem(INCOME_KEY);
+    incomeEntries = raw ? JSON.parse(raw) : [];
+  } catch(e) { incomeEntries = []; }
 
   /* اگه از قبل قیمتی تنظیم شده ولی هنوز تاریخچه‌ای نداره، یه نقطه شروع براش می‌سازیم
      تا هزینه روزهای گذشته با تغییر بعدی قیمت عوض نشه */
@@ -702,6 +789,10 @@ async function saveCoffeeCostLog(){
   try { localStorage.setItem(COFFEE_COST_KEY, JSON.stringify(coffeeCostLog)); }
   catch(e) { console.error('ذخیره‌سازی ناموفق بود', e); }
 }
+async function saveIncomeEntries(){
+  try { localStorage.setItem(INCOME_KEY, JSON.stringify(incomeEntries)); }
+  catch(e) { console.error('ذخیره‌سازی ناموفق بود', e); }
+}
 
 /* شمارش کل (برای هدف پاکت ۲۰تایی): فقط نخ‌هایی که واقعاً از پاکت خودت کم شده -
    یعنی ثبت با دکمه اصلی/دکمه فراموشی، به‌علاوه نخ‌هایی که رفیقت از پاکتت برداشته.
@@ -747,6 +838,14 @@ function coffeeGrandCost(){
   let sum = 0;
   Object.keys(coffeeCostLog).forEach(k => sum += (coffeeCostLog[k] || 0));
   return sum;
+}
+
+/* ---- wallet helpers ---- */
+function incomeTotal(){
+  return incomeEntries.reduce((s,e) => s + (e.amount||0), 0);
+}
+function walletRemaining(){
+  return incomeTotal() - grandCost() - coffeeGrandCost();
 }
 
 /* ---- color interpolation for the tap button ---- */
@@ -814,6 +913,47 @@ function renderHome(){
   document.getElementById('pack-remaining').innerHTML = `باقی‌مونده این پاکت: <b>${toFa(packRemaining())} نخ</b>`;
 }
 
+/* ---- rendering: goal banner + goal tab ---- */
+function renderGoalBanner(){
+  const banner = document.getElementById('goal-banner');
+  const goalCig = settings.goalCig || 0;
+  const goalCoffee = settings.goalCoffee || 0;
+  if (goalCig <= 0 && goalCoffee <= 0){
+    banner.style.display = 'none';
+    return;
+  }
+  banner.style.display = 'block';
+  const key = todayKey();
+  const cigCount = log[key] || 0;
+  const coffeeCount = coffeeCountForDay(key);
+
+  const rowCig = document.getElementById('goal-row-cig');
+  if (goalCig > 0){
+    rowCig.style.display = 'flex';
+    const pct = Math.min(100, Math.round((cigCount/goalCig)*100));
+    const fill = document.getElementById('goal-fill-cig');
+    fill.style.width = pct + '%';
+    fill.style.background = cigCount >= goalCig ? '#E4633A' : 'var(--accent)';
+    document.getElementById('goal-text-cig').textContent = toFa(cigCount) + '/' + toFa(goalCig);
+  } else {
+    rowCig.style.display = 'none';
+  }
+
+  const rowCoffee = document.getElementById('goal-row-coffee');
+  if (goalCoffee > 0){
+    rowCoffee.style.display = 'flex';
+    const pct2 = Math.min(100, Math.round((coffeeCount/goalCoffee)*100));
+    document.getElementById('goal-fill-coffee').style.width = pct2 + '%';
+    document.getElementById('goal-text-coffee').textContent = toFa(coffeeCount) + '/' + toFa(goalCoffee);
+  } else {
+    rowCoffee.style.display = 'none';
+  }
+}
+function renderGoalTab(){
+  document.getElementById('goal-cig-input').value = settings.goalCig || '';
+  document.getElementById('goal-coffee-input').value = settings.goalCoffee || '';
+}
+
 /* ---- rendering: coffee ---- */
 function renderCoffeeTab(){
   const key = todayKey();
@@ -866,7 +1006,8 @@ function renderStats(){
   const last14 = [];
   for (let i=13; i>=0; i--) last14.push(daysAgoKey(i));
   const values = last14.map(k => log[k] || 0);
-  document.getElementById('chart-wrap').innerHTML = buildLineChartSVG(values);
+  const coffeeValues = last14.map(k => coffeeCountForDay(k));
+  document.getElementById('chart-wrap').innerHTML = buildLineChartSVG(values, coffeeValues);
   document.getElementById('chart-labels').innerHTML = last14.map(k => {
     const d = keyToDate(k);
     return `<span>${new Intl.DateTimeFormat('fa-IR', {day:'numeric'}).format(d)}</span>`;
@@ -917,22 +1058,36 @@ function renderHourStats(){
     </div>`;
   }).join('');
 }
-function buildLineChartSVG(values){
+function buildLineChartSVG(values, values2){
   const W = 300, H = 110, PAD = 8;
-  const max = Math.max(1, ...values);
+  const allVals = values2 ? values.concat(values2) : values;
+  const max = Math.max(1, ...allVals);
   const stepX = values.length > 1 ? (W - PAD*2) / (values.length - 1) : 0;
-  const pts = values.map((v,i) => {
-    const x = PAD + i*stepX;
-    const y = H - PAD - (v/max)*(H - PAD*2);
-    return { x, y };
-  });
+  function toPts(arr){
+    return arr.map((v,i) => {
+      const x = PAD + i*stepX;
+      const y = H - PAD - (v/max)*(H - PAD*2);
+      return { x, y };
+    });
+  }
+  const pts = toPts(values);
   const line = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
   const area = `${PAD},${H-PAD} ` + line + ` ${W-PAD},${H-PAD}`;
   const dots = pts.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" style="fill:var(--accent)"/>`).join('');
+
+  let coffeeSvg = '';
+  if (values2){
+    const pts2 = toPts(values2);
+    const line2 = pts2.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+    const dots2 = pts2.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.5" style="fill:var(--coffee)"/>`).join('');
+    coffeeSvg = `<polyline points="${line2}" style="fill:none;stroke:var(--coffee);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;stroke-dasharray:4,3"/>${dots2}`;
+  }
+
   return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:110px;overflow:visible">
     <polygon points="${area}" style="fill:var(--accent);opacity:0.12"/>
     <polyline points="${line}" style="fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round"/>
     ${dots}
+    ${coffeeSvg}
   </svg>`;
 }
 
@@ -955,9 +1110,14 @@ function renderCost(){
   document.getElementById('coffee-cost-total').textContent = coffeeTotalCost > 0 ? faNum(coffeeTotalCost) + ' تومان' : '—';
   const combined = totalCost + coffeeTotalCost;
   document.getElementById('grand-total-cost').textContent = combined > 0 ? faNum(combined) + ' تومان' : '—';
+
+  const incTotal = incomeTotal();
+  document.getElementById('income-total').textContent = incTotal > 0 ? faNum(incTotal) + ' تومان' : '—';
+  const remaining = walletRemaining();
+  document.getElementById('wallet-remaining').textContent = faNum(remaining) + ' تومان';
 }
 
-function renderAll(){ renderHome(); renderCoffeeTab(); renderStats(); renderCost(); }
+function renderAll(){ renderHome(); renderGoalBanner(); renderGoalTab(); renderCoffeeTab(); renderStats(); renderCost(); }
 
 /* ---- pack-completion modal ---- */
 function openPackModal(){
@@ -1266,10 +1426,32 @@ async function savePrice(){
   setTimeout(() => note.textContent = '', 1800);
 }
 
+async function saveGoal(){
+  settings.goalCig = Math.max(0, parseInt(document.getElementById('goal-cig-input').value) || 0);
+  settings.goalCoffee = Math.max(0, parseInt(document.getElementById('goal-coffee-input').value) || 0);
+  await saveSettings();
+  renderAll();
+  const note = document.getElementById('goal-saved-note');
+  note.textContent = 'ذخیره شد';
+  setTimeout(() => note.textContent = '', 1800);
+}
+
+async function addIncome(){
+  const input = document.getElementById('income-input');
+  const v = parseFloat(input.value) || 0;
+  if (v > 0){
+    incomeEntries.push({ date: todayKey(), amount: v });
+    await saveIncomeEntries();
+    input.value = '';
+    renderAll();
+    showToast('ثبت شد ✅');
+  }
+}
+
 function buildBackupString(){
   return JSON.stringify({
     log, friendLog, looseLog, looseCostLog, hourLog, giftLog, priceHistory, settings,
-    coffeeSingleLog, coffeeDoubleLog, coffeeCostLog
+    coffeeSingleLog, coffeeDoubleLog, coffeeCostLog, incomeEntries
   });
 }
 
@@ -1318,13 +1500,15 @@ function openRestoreModal(){
       hourLog = d.hourLog || {};
       giftLog = d.giftLog || {};
       priceHistory = d.priceHistory || {};
-      settings = Object.assign({ packPrice:0, cigsPerPack:20, packPromptCount:0 }, d.settings || {});
+      settings = Object.assign({ packPrice:0, cigsPerPack:20, packPromptCount:0, goalCig:0, goalCoffee:0 }, d.settings || {});
       coffeeSingleLog = d.coffeeSingleLog || {};
       coffeeDoubleLog = d.coffeeDoubleLog || {};
       coffeeCostLog = d.coffeeCostLog || {};
+      incomeEntries = d.incomeEntries || [];
       await saveLog(); await saveFriendLog(); await saveLooseLog(); await saveLooseCostLog();
       await saveHourLog(); await saveGiftLog(); await savePriceHistory(); await saveSettings();
       await saveCoffeeSingleLog(); await saveCoffeeDoubleLog(); await saveCoffeeCostLog();
+      await saveIncomeEntries();
       renderAll();
       closePackModal();
       showToast('بازگردانی شد ✅');
@@ -1356,6 +1540,9 @@ document.getElementById('restore-btn').addEventListener('click', openRestoreModa
 document.getElementById('save-price-btn').addEventListener('click', savePrice);
 document.getElementById('coffee-single-btn').addEventListener('click', () => openCoffeeModal('single'));
 document.getElementById('coffee-double-btn').addEventListener('click', () => openCoffeeModal('double'));
+document.getElementById('goal-save-btn').addEventListener('click', saveGoal);
+document.getElementById('income-save-btn').addEventListener('click', addIncome);
+document.getElementById('modal-close-btn').addEventListener('click', closePackModal);
 document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => switchView(b.dataset.view)));
 
 (async function init(){
