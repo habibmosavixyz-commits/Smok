@@ -19,6 +19,8 @@
     --line: #35312F;
     --accent: #C1502E;
     --coffee: #4FA3C4;
+    --ok: #4CAF7A;
+    --bad: #E4633A;
   }
 
   html, body {
@@ -306,6 +308,7 @@
   .day-row .day-label { font-size: 14px; min-width: 78px; }
   .day-row .day-total { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .empty-note { color: var(--ash); font-size: 13px; text-align: center; padding: 16px 0; }
+  .list-toggle-wrap { text-align: center; margin-top: 8px; }
 
   .hour-row {
     display: flex;
@@ -488,7 +491,8 @@
 <div class="view" id="view-coffee">
   <h1>قهوه</h1>
   <div class="stat-grid">
-    <div class="stat-box"><div class="label">قهوه امروز</div><div class="value" id="coffee-today-count">۰</div></div>
+    <div class="stat-box"><div class="label">تک امروز</div><div class="value" id="coffee-single-today-count">۰</div></div>
+    <div class="stat-box"><div class="label">دوبل امروز</div><div class="value" id="coffee-double-today-count">۰</div></div>
     <div class="stat-box"><div class="label">هزینه امروز</div><div class="value" id="coffee-today-cost" style="font-size:16px">—</div></div>
   </div>
 
@@ -517,7 +521,7 @@
   <div class="saved-note" id="goal-saved-note"></div>
 
   <div class="section-title" style="margin-top:28px">هفته اخیر (۷ روز گذشته)</div>
-  <div class="stat-grid" id="goal-week-grid"></div>
+  <div id="goal-week-list"></div>
 </div>
 
 <div class="view" id="view-stats">
@@ -541,6 +545,9 @@
   </div>
   <div class="section-title">تاریخچه روزانه</div>
   <div id="history-list"></div>
+  <div class="list-toggle-wrap">
+    <button class="pack-edit-link" id="history-toggle-btn">نمایش بیشتر</button>
+  </div>
 </div>
 
 <div class="view" id="view-cost">
@@ -567,17 +574,6 @@
   <div class="cost-summary">
     <div class="row"><span>هزینه کل قهوه</span><b id="coffee-cost-total">—</b></div>
     <div class="row grand"><span>مجموع کل (سیگار و قهوه)</span><b id="grand-total-cost">—</b></div>
-  </div>
-
-  <div class="section-title" style="margin-top:28px">موجودی</div>
-  <div class="field">
-    <label>مبلغ واریزی (مثلاً حقوق)</label>
-    <input type="number" id="income-input" inputmode="numeric" placeholder="مثلاً ۵۰۰۰۰۰۰">
-  </div>
-  <button class="save-btn" id="income-save-btn">ثبت واریزی</button>
-  <div class="cost-summary">
-    <div class="row"><span>واریزی این برج</span><b id="income-total">—</b></div>
-    <div class="row grand"><span>باقی‌مونده این برج</span><b id="wallet-remaining">—</b></div>
   </div>
 
   <div class="section-title" style="margin-top:28px">پشتیبان‌گیری از اطلاعات</div>
@@ -617,7 +613,7 @@ const SETTINGS_KEY = 'smoke-settings';
 const COFFEE_SINGLE_KEY = 'coffee-single-log';
 const COFFEE_DOUBLE_KEY = 'coffee-double-log';
 const COFFEE_COST_KEY = 'coffee-cost-log';
-const INCOME_KEY = 'income-log';
+const GOAL_HISTORY_KEY = 'goal-history';
 const faDigits = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
 function toFa(n){ return String(n).split('').map(d => faDigits[d] ?? d).join(''); }
 function faNum(n){ return new Intl.NumberFormat('fa-IR').format(Math.round(n)); }
@@ -689,8 +685,9 @@ let settings = { packPrice: 0, cigsPerPack: 20, packPromptCount: 0, goalCig: 0, 
 let coffeeSingleLog = {};
 let coffeeDoubleLog = {};
 let coffeeCostLog = {};
-let incomeEntries = [];
+let goalHistory = {};
 let chartRangeDays = 14;
+let historyExpanded = false;
 
 /* ذخیره‌سازی محلی روی خود گوشی (بدون نیاز به اینترنت) */
 async function loadAll(){
@@ -739,9 +736,9 @@ async function loadAll(){
     coffeeCostLog = raw ? JSON.parse(raw) : {};
   } catch(e) { coffeeCostLog = {}; }
   try {
-    const raw = localStorage.getItem(INCOME_KEY);
-    incomeEntries = raw ? JSON.parse(raw) : [];
-  } catch(e) { incomeEntries = []; }
+    const raw = localStorage.getItem(GOAL_HISTORY_KEY);
+    goalHistory = raw ? JSON.parse(raw) : {};
+  } catch(e) { goalHistory = {}; }
 
   /* اگه از قبل قیمتی تنظیم شده ولی هنوز تاریخچه‌ای نداره، یه نقطه شروع براش می‌سازیم
      تا هزینه روزهای گذشته با تغییر بعدی قیمت عوض نشه */
@@ -752,6 +749,13 @@ async function loadAll(){
     const seedDate = dates.length > 0 ? dates[0] : todayKey();
     priceHistory[seedDate] = ppc;
     await savePriceHistory();
+  }
+  /* همینطور برای هدف: اگه قبلاً هدفی تنظیم شده ولی هنوز تاریخچه نداره، یه نقطه شروع می‌سازیم */
+  if (Object.keys(goalHistory).length === 0 && ((settings.goalCig||0) > 0 || (settings.goalCoffee||0) > 0)){
+    const dates = Object.keys(log).sort();
+    const seedDate = dates.length > 0 ? dates[0] : todayKey();
+    goalHistory[seedDate] = { cig: settings.goalCig || 0, coffee: settings.goalCoffee || 0 };
+    await saveGoalHistory();
   }
 }
 async function saveLog(){
@@ -822,9 +826,20 @@ async function saveCoffeeCostLog(){
   try { localStorage.setItem(COFFEE_COST_KEY, JSON.stringify(coffeeCostLog)); }
   catch(e) { console.error('ذخیره‌سازی ناموفق بود', e); }
 }
-async function saveIncomeEntries(){
-  try { localStorage.setItem(INCOME_KEY, JSON.stringify(incomeEntries)); }
+async function saveGoalHistory(){
+  try { localStorage.setItem(GOAL_HISTORY_KEY, JSON.stringify(goalHistory)); }
   catch(e) { console.error('ذخیره‌سازی ناموفق بود', e); }
+}
+/* هدفی که تو یه روز خاص معتبر بوده رو برمی‌گردونه، نه هدف فعلی -
+   این‌جوری تغییر هدف امروز روی قضاوت روزهای قبل اثر نمیذاره */
+function goalForDay(key){
+  const dates = Object.keys(goalHistory).sort();
+  let applicable = null;
+  for (const d of dates){
+    if (d <= key) applicable = goalHistory[d]; else break;
+  }
+  if (applicable === null && dates.length > 0) applicable = goalHistory[dates[0]];
+  return applicable || { cig: 0, coffee: 0 };
 }
 
 /* شمارش کل (برای هدف پاکت ۲۰تایی): فقط نخ‌هایی که واقعاً از پاکت خودت کم شده -
@@ -871,21 +886,6 @@ function coffeeGrandCost(){
   let sum = 0;
   Object.keys(coffeeCostLog).forEach(k => sum += (coffeeCostLog[k] || 0));
   return sum;
-}
-
-/* ---- wallet helpers (scoped to the current Persian month) ---- */
-function incomeTotalForMonth(monthKey){
-  return incomeEntries
-    .filter(e => persianMonthKey(keyToDate(e.date)) === monthKey)
-    .reduce((s,e) => s + (e.amount||0), 0);
-}
-function walletRemainingForMonth(monthKey){
-  let cigCost = 0;
-  const costKeys = new Set([...Object.keys(log), ...Object.keys(friendLog), ...Object.keys(looseCostLog)]);
-  costKeys.forEach(k => { if (persianMonthKey(keyToDate(k)) === monthKey) cigCost += dayCost(k); });
-  let coffCost = 0;
-  Object.keys(coffeeCostLog).forEach(k => { if (persianMonthKey(keyToDate(k)) === monthKey) coffCost += coffeeCostForDay(k); });
-  return incomeTotalForMonth(monthKey) - cigCost - coffCost;
 }
 
 /* ---- color interpolation for the tap button ---- */
@@ -956,8 +956,9 @@ function renderHome(){
 /* ---- rendering: goal banner + goal tab ---- */
 function renderGoalBanner(){
   const banner = document.getElementById('goal-banner');
-  const goalCig = settings.goalCig || 0;
-  const goalCoffee = settings.goalCoffee || 0;
+  const g = goalForDay(todayKey());
+  const goalCig = g.cig || 0;
+  const goalCoffee = g.coffee || 0;
   if (goalCig <= 0 && goalCoffee <= 0){
     banner.style.display = 'none';
     return;
@@ -973,7 +974,7 @@ function renderGoalBanner(){
     const pct = Math.min(100, Math.round((cigCount/goalCig)*100));
     const fill = document.getElementById('goal-fill-cig');
     fill.style.width = pct + '%';
-    fill.style.background = cigCount >= goalCig ? '#E4633A' : 'var(--accent)';
+    fill.style.background = cigCount >= goalCig ? 'var(--bad)' : 'var(--accent)';
     document.getElementById('goal-text-cig').textContent = toFa(cigCount) + '/' + toFa(goalCig);
   } else {
     rowCig.style.display = 'none';
@@ -992,40 +993,37 @@ function renderGoalBanner(){
 function renderGoalTab(){
   document.getElementById('goal-cig-input').value = settings.goalCig || '';
   document.getElementById('goal-coffee-input').value = settings.goalCoffee || '';
-
-  const goalCig = settings.goalCig || 0;
-  const goalCoffee = settings.goalCoffee || 0;
-  const grid = document.getElementById('goal-week-grid');
-  if (goalCig <= 0 && goalCoffee <= 0){
-    grid.innerHTML = '<div class="empty-note">اول یه هدف تنظیم کن</div>';
-    return;
+  renderGoalWeekList();
+}
+function renderGoalWeekList(){
+  const list = document.getElementById('goal-week-list');
+  let html = '';
+  let any = false;
+  for (let i=6; i>=0; i--){
+    const k = daysAgoKey(i);
+    const g = goalForDay(k);
+    const gc = g.cig || 0, gf = g.coffee || 0;
+    if (gc <= 0 && gf <= 0) continue;
+    any = true;
+    const cigCount = log[k] || 0;
+    const coffeeCount = coffeeCountForDay(k);
+    const cigOk = gc <= 0 || cigCount <= gc;
+    const coffeeOk = gf <= 0 || coffeeCount <= gf;
+    const ok = cigOk && coffeeOk;
+    const { weekday, day } = formatDateLabel(k);
+    html += `<div class="day-row">
+      <div class="day-label">${weekday}<br><span style="color:var(--ash);font-size:12px">${day}</span></div>
+      <div class="day-total" style="color:${ok ? 'var(--ok)' : 'var(--bad)'};font-size:20px">${ok ? '✓' : '✗'}</div>
+    </div>`;
   }
-  let boxes = '';
-  if (goalCig > 0){
-    let met = 0, over = 0;
-    for (let i=0; i<7; i++){
-      const c = log[daysAgoKey(i)] || 0;
-      if (c <= goalCig) met++; else over++;
-    }
-    boxes += `<div class="stat-box"><div class="label">سیگار: روزهای موفق</div><div class="value">${toFa(met)}/۷</div></div>`;
-    boxes += `<div class="stat-box"><div class="label">سیگار: روزهای رد شده</div><div class="value">${toFa(over)}/۷</div></div>`;
-  }
-  if (goalCoffee > 0){
-    let met2 = 0, over2 = 0;
-    for (let i=0; i<7; i++){
-      const c = coffeeCountForDay(daysAgoKey(i));
-      if (c <= goalCoffee) met2++; else over2++;
-    }
-    boxes += `<div class="stat-box"><div class="label">قهوه: روزهای موفق</div><div class="value">${toFa(met2)}/۷</div></div>`;
-    boxes += `<div class="stat-box"><div class="label">قهوه: روزهای رد شده</div><div class="value">${toFa(over2)}/۷</div></div>`;
-  }
-  grid.innerHTML = boxes;
+  list.innerHTML = any ? html : '<div class="empty-note">اول یه هدف تنظیم کن</div>';
 }
 
 /* ---- rendering: coffee ---- */
 function renderCoffeeTab(){
   const key = todayKey();
-  document.getElementById('coffee-today-count').textContent = toFa(coffeeCountForDay(key));
+  document.getElementById('coffee-single-today-count').textContent = toFa(coffeeSingleLog[key] || 0);
+  document.getElementById('coffee-double-today-count').textContent = toFa(coffeeDoubleLog[key] || 0);
   const cost = coffeeCostForDay(key);
   document.getElementById('coffee-today-cost').textContent = cost > 0 ? faNum(cost) + ' ت' : '—';
 }
@@ -1095,9 +1093,11 @@ function renderStats(){
   const todK = todayKey();
   const histKeys = Object.keys(log).filter(k => k !== todK && (log[k]||0) > 0).sort().reverse();
   const listEl = document.getElementById('history-list');
-  listEl.innerHTML = histKeys.length === 0
+  const limit = historyExpanded ? histKeys.length : 7;
+  const shown = histKeys.slice(0, limit);
+  listEl.innerHTML = shown.length === 0
     ? '<div class="empty-note">هنوز روز کاملی ثبت نشده</div>'
-    : histKeys.slice(0,60).map(k => {
+    : shown.map(k => {
         const { weekday, day } = formatDateLabel(k);
         return `<div class="day-row" data-key="${k}" style="cursor:pointer">
           <div class="day-label">${weekday}<br><span style="color:var(--ash);font-size:12px">${day}</span></div>
@@ -1107,9 +1107,20 @@ function renderStats(){
   listEl.querySelectorAll('.day-row').forEach(row => {
     row.addEventListener('click', () => openEditPastModal(row.dataset.key));
   });
+  const historyToggleBtn = document.getElementById('history-toggle-btn');
+  if (histKeys.length > 7){
+    historyToggleBtn.style.display = 'inline-block';
+    historyToggleBtn.textContent = historyExpanded ? 'نمایش کمتر' : 'نمایش بیشتر';
+  } else {
+    historyToggleBtn.style.display = 'none';
+  }
 }
 function toggleChartRange(){
   chartRangeDays = chartRangeDays === 14 ? 30 : 14;
+  renderStats();
+}
+function toggleHistoryList(){
+  historyExpanded = !historyExpanded;
   renderStats();
 }
 
@@ -1199,11 +1210,6 @@ function renderCost(){
   document.getElementById('coffee-cost-total').textContent = coffeeTotalCost > 0 ? faNum(coffeeTotalCost) + ' تومان' : '—';
   const combined = totalCost + coffeeTotalCost;
   document.getElementById('grand-total-cost').textContent = combined > 0 ? faNum(combined) + ' تومان' : '—';
-
-  const incMonth = incomeTotalForMonth(curMonthKey);
-  document.getElementById('income-total').textContent = incMonth > 0 ? faNum(incMonth) + ' تومان' : '—';
-  const remaining = walletRemainingForMonth(curMonthKey);
-  document.getElementById('wallet-remaining').textContent = faNum(remaining) + ' تومان';
 }
 
 function renderAll(){ renderHome(); renderGoalBanner(); renderGoalTab(); renderCoffeeTab(); renderStats(); renderCost(); }
@@ -1519,28 +1525,18 @@ async function saveGoal(){
   settings.goalCig = Math.max(0, parseInt(document.getElementById('goal-cig-input').value) || 0);
   settings.goalCoffee = Math.max(0, parseInt(document.getElementById('goal-coffee-input').value) || 0);
   await saveSettings();
+  goalHistory[todayKey()] = { cig: settings.goalCig, coffee: settings.goalCoffee };
+  await saveGoalHistory();
   renderAll();
   const note = document.getElementById('goal-saved-note');
   note.textContent = 'ذخیره شد';
   setTimeout(() => note.textContent = '', 1800);
 }
 
-async function addIncome(){
-  const input = document.getElementById('income-input');
-  const v = parseFloat(input.value) || 0;
-  if (v > 0){
-    incomeEntries.push({ date: todayKey(), amount: v });
-    await saveIncomeEntries();
-    input.value = '';
-    renderAll();
-    showToast('ثبت شد ✅');
-  }
-}
-
 function buildBackupString(){
   return JSON.stringify({
     log, friendLog, looseLog, looseCostLog, hourLog, giftLog, priceHistory, settings,
-    coffeeSingleLog, coffeeDoubleLog, coffeeCostLog, incomeEntries
+    coffeeSingleLog, coffeeDoubleLog, coffeeCostLog, goalHistory
   });
 }
 
@@ -1593,11 +1589,11 @@ function openRestoreModal(){
       coffeeSingleLog = d.coffeeSingleLog || {};
       coffeeDoubleLog = d.coffeeDoubleLog || {};
       coffeeCostLog = d.coffeeCostLog || {};
-      incomeEntries = d.incomeEntries || [];
+      goalHistory = d.goalHistory || {};
       await saveLog(); await saveFriendLog(); await saveLooseLog(); await saveLooseCostLog();
       await saveHourLog(); await saveGiftLog(); await savePriceHistory(); await saveSettings();
       await saveCoffeeSingleLog(); await saveCoffeeDoubleLog(); await saveCoffeeCostLog();
-      await saveIncomeEntries();
+      await saveGoalHistory();
       renderAll();
       closePackModal();
       showToast('بازگردانی شد ✅');
@@ -1630,9 +1626,9 @@ document.getElementById('save-price-btn').addEventListener('click', savePrice);
 document.getElementById('coffee-single-btn').addEventListener('click', () => openCoffeeModal('single'));
 document.getElementById('coffee-double-btn').addEventListener('click', () => openCoffeeModal('double'));
 document.getElementById('goal-save-btn').addEventListener('click', saveGoal);
-document.getElementById('income-save-btn').addEventListener('click', addIncome);
 document.getElementById('modal-close-btn').addEventListener('click', closePackModal);
 document.getElementById('chart-range-toggle').addEventListener('click', toggleChartRange);
+document.getElementById('history-toggle-btn').addEventListener('click', toggleHistoryList);
 document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => switchView(b.dataset.view)));
 
 (async function init(){
@@ -1650,4 +1646,3 @@ if ('serviceWorker' in navigator) {
 </script>
 </body>
 </html>
-
