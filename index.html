@@ -520,7 +520,11 @@
   <button class="save-btn" id="goal-save-btn">ذخیره هدف</button>
   <div class="saved-note" id="goal-saved-note"></div>
 
-  <div class="section-title" style="margin-top:28px">هفته اخیر (۷ روز گذشته)</div>
+  <div class="section-title" style="margin-top:28px">سود از کمتر کشیدن</div>
+  <div class="stat-grid" id="goal-saving-grid" style="margin-bottom:8px"></div>
+  <div class="friend-note" style="margin-bottom:22px;text-align:right">فقط روزهای تموم‌شده حساب میشه (امروز نه)، با قیمت نخ همون روز</div>
+
+  <div class="section-title" style="margin-top:8px">هفته اخیر (۷ روز گذشته)</div>
   <div id="goal-week-list"></div>
 </div>
 
@@ -841,6 +845,33 @@ function goalForDay(key){
   if (applicable === null && dates.length > 0) applicable = goalHistory[dates[0]];
   return applicable || { cig: 0, coffee: 0 };
 }
+/* سود روزانه: اگه اون روز هدفی برای سیگار داشتی و کمتر از هدف کشیدی، تفاوتش با قیمت همون روز حساب میشه */
+function cigSavingsForDay(key){
+  const g = goalForDay(key);
+  const gc = g.cig || 0;
+  if (gc <= 0) return { cigs: 0, amount: 0 };
+  const count = log[key] || 0;
+  const savedCigs = Math.max(0, gc - count);
+  const amount = savedCigs * priceForDay(key);
+  return { cigs: savedCigs, amount };
+}
+/* لیست همه روزهای «تموم‌شده» (بدون امروز) از اولین باری که هدفی ثبت شده تا دیروز */
+function allSavingsDays(){
+  const dates = Object.keys(goalHistory).sort();
+  if (dates.length === 0) return [];
+  const start = keyToDate(dates[0]);
+  const end = new Date();
+  end.setDate(end.getDate() - 1);
+  if (end < start) return [];
+  const days = [];
+  const cur = new Date(start);
+  while (cur <= end){
+    const y = cur.getFullYear(), m = String(cur.getMonth()+1).padStart(2,'0'), d = String(cur.getDate()).padStart(2,'0');
+    days.push(y + '-' + m + '-' + d);
+    cur.setDate(cur.getDate() + 1);
+  }
+  return days;
+}
 
 /* شمارش کل (برای هدف پاکت ۲۰تایی): فقط نخ‌هایی که واقعاً از پاکت خودت کم شده -
    یعنی ثبت با دکمه اصلی/دکمه فراموشی، به‌علاوه نخ‌هایی که رفیقت از پاکتت برداشته.
@@ -993,7 +1024,33 @@ function renderGoalBanner(){
 function renderGoalTab(){
   document.getElementById('goal-cig-input').value = settings.goalCig || '';
   document.getElementById('goal-coffee-input').value = settings.goalCoffee || '';
+  renderGoalSavings();
   renderGoalWeekList();
+}
+function renderGoalSavings(){
+  const grid = document.getElementById('goal-saving-grid');
+  const days = allSavingsDays();
+  if (days.length === 0){
+    grid.innerHTML = '<div class="empty-note" style="grid-column:1/-1">هنوز داده‌ای برای محاسبه سود نیست</div>';
+    return;
+  }
+  const curMonthKey = persianMonthKey(new Date());
+  let monthCigs = 0, monthAmount = 0, totalCigs = 0, totalAmount = 0;
+  days.forEach(k => {
+    const s = cigSavingsForDay(k);
+    totalCigs += s.cigs;
+    totalAmount += s.amount;
+    if (persianMonthKey(keyToDate(k)) === curMonthKey){
+      monthCigs += s.cigs;
+      monthAmount += s.amount;
+    }
+  });
+  grid.innerHTML = `
+    <div class="stat-box"><div class="label">سود این برج</div><div class="value" style="font-size:16px">${monthAmount>0 ? faNum(monthAmount)+' ت' : '—'}</div></div>
+    <div class="stat-box"><div class="label">نخ صرفه‌جویی این برج</div><div class="value">${toFa(monthCigs)}</div></div>
+    <div class="stat-box"><div class="label">سود کل</div><div class="value" style="font-size:16px">${totalAmount>0 ? faNum(totalAmount)+' ت' : '—'}</div></div>
+    <div class="stat-box"><div class="label">نخ صرفه‌جویی کل</div><div class="value">${toFa(totalCigs)}</div></div>
+  `;
 }
 function renderGoalWeekList(){
   const list = document.getElementById('goal-week-list');
