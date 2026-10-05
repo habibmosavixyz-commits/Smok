@@ -1067,10 +1067,22 @@ function renderGoalWeekList(){
     const cigOk = gc <= 0 || cigCount <= gc;
     const coffeeOk = gf <= 0 || coffeeCount <= gf;
     const ok = cigOk && coffeeOk;
+    const savedCig = gc > 0 ? Math.max(0, gc - cigCount) : null;
+    const savedCoffee = gf > 0 ? Math.max(0, gf - coffeeCount) : null;
+    const sum = (savedCig||0) + (savedCoffee||0);
     const { weekday, day } = formatDateLabel(k);
+    let numsHtml = '';
+    if (savedCoffee !== null) numsHtml += `<span style="color:var(--coffee);font-weight:800;font-size:14px">${toFa(savedCoffee)}</span>`;
+    if (savedCig !== null) numsHtml += `<span style="color:var(--accent);font-weight:800;font-size:14px">${toFa(savedCig)}</span>`;
+    if (savedCoffee !== null || savedCig !== null){
+      numsHtml += `<span style="color:var(--ash);font-size:11px">جمع ${toFa(sum)}</span>`;
+    }
     html += `<div class="day-row">
       <div class="day-label">${weekday}<br><span style="color:var(--ash);font-size:12px">${day}</span></div>
-      <div class="day-total" style="color:${ok ? 'var(--ok)' : 'var(--bad)'};font-size:20px">${ok ? '✓' : '✗'}</div>
+      <div style="display:flex;align-items:center;gap:9px">
+        ${numsHtml}
+        <span style="font-size:20px;color:${ok ? 'var(--ok)' : 'var(--bad)'}">${ok ? '✓' : '✗'}</span>
+      </div>
     </div>`;
   }
   list.innerHTML = any ? html : '<div class="empty-note">اول یه هدف تنظیم کن</div>';
