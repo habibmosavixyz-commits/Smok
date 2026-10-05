@@ -855,11 +855,16 @@ function cigSavingsForDay(key){
   const amount = savedCigs * priceForDay(key);
   return { cigs: savedCigs, amount };
 }
-/* لیست همه روزهای «تموم‌شده» (بدون امروز) از اولین باری که هدفی ثبت شده تا دیروز */
+/* لیست همه روزهای «تموم‌شده» (بدون امروز). از اولین روزی که توی برنامه چیزی ثبت کردی شروع میشه (نه
+   از روزی که هدف رو تنظیم کردی) چون goalForDay خودش هدف فعلی رو عقب‌تر هم اعمال می‌کنه -
+   این‌جوری اگه همین امروز هدف رو تنظیم کرده باشی، روزهای قبلی هم با همین هدف حساب میشن. */
 function allSavingsDays(){
-  const dates = Object.keys(goalHistory).sort();
-  if (dates.length === 0) return [];
-  const start = keyToDate(dates[0]);
+  const goalDates = Object.keys(goalHistory).sort();
+  if (goalDates.length === 0) return [];
+  const logDates = Object.keys(log).sort();
+  const earliestGoal = keyToDate(goalDates[0]);
+  const earliestLog = logDates.length > 0 ? keyToDate(logDates[0]) : earliestGoal;
+  const start = earliestLog < earliestGoal ? earliestLog : earliestGoal;
   const end = new Date();
   end.setDate(end.getDate() - 1);
   if (end < start) return [];
